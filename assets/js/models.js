@@ -1,29 +1,63 @@
+
 window.OBRAS = window.OBRAS || {};
 OBRAS.models = {
-  createDemoState: function(){
+  createEmptyDB: function(){
     return {
+      meta: { version: OBRAS.config.VERSION, updatedAt: new Date().toISOString(), seqOS: 0, importedFromLegacy: false },
       session: { loggedIn: false, userName: 'Edemilson' },
       empresa: { nome: 'TELESITES', titulo: 'Controle de Obras' },
-      metricas: {
-        receitaContratada: 80300,
-        receitaRecebida: 16500,
-        aReceber: 63800,
-        parceirosPagar: 32250,
-        saldoCaixa: 593.26,
-        despesasVencer: 5246.31,
-        despesasPagas: 1626.74,
-        receberLiquido: 26896.95
-      },
-      obras: [
-        { id:'OBR-001', nome:'Modernização Torre Artemis', cidade:'Campinas/SP', status:'Em andamento', valor:25800, parceiro:'Alfa', etapa:'Estrutura' },
-        { id:'OBR-002', nome:'Vistoria Site Delta', cidade:'Sumaré/SP', status:'A receber', valor:18400, parceiro:'Nexus', etapa:'Recebimento' },
-        { id:'OBR-003', nome:'Reforço Estrutural Atlas', cidade:'Piracicaba/SP', status:'Planejamento', valor:36100, parceiro:'Prime', etapa:'Mobilização' }
+      empresas: [
+        { id:'emp_1', nome:'TELESITES' },
+        { id:'emp_2', nome:'Metal Alfa' }
       ],
-      avisos: [
-        { titulo:'2 despesas vencem em 5 dias', detalhe:'Revisar fornecedores e agenda de pagamento.' },
-        { titulo:'1 obra com recebimento pendente', detalhe:'Conferir medição e liberar cobrança.' },
-        { titulo:'Backup local recomendado', detalhe:'Gerar arquivo antes da próxima migração.' }
-      ]
+      parceiros: [
+        { id:'par_1', nome:'Alfa' },
+        { id:'par_2', nome:'Nexus' },
+        { id:'par_3', nome:'Prime' }
+      ],
+      clientes: [],
+      obras: [],
+      recebimentos: [],
+      repasses: [],
+      pagamentosParceiros: [],
+      despesas: [],
+      despesasGerais: [],
+      movimentosCaixa: []
     };
+  },
+  createSeedDB: function(){
+    var db = this.createEmptyDB();
+    db.meta.seqOS = 3;
+    db.obras = [
+      { id:'obra_1', numeroOS:'OS-001', siteTorre:'Modernização Torre Artemis', cidade:'Campinas/SP', statusObra:'Em execução', statusCicloOS:'Ativa', valorObra:25800, parceiroNome:'Alfa', etapa:'Estrutura', dataAbertura:'2026-04-02' },
+      { id:'obra_2', numeroOS:'OS-002', siteTorre:'Vistoria Site Delta', cidade:'Sumaré/SP', statusObra:'Planejado', statusCicloOS:'Ativa', valorObra:18400, parceiroNome:'Nexus', etapa:'Recebimento', dataAbertura:'2026-04-04' },
+      { id:'obra_3', numeroOS:'OS-003', siteTorre:'Reforço Estrutural Atlas', cidade:'Piracicaba/SP', statusObra:'Planejado', statusCicloOS:'Ativa', valorObra:36100, parceiroNome:'Prime', etapa:'Mobilização', dataAbertura:'2026-04-08' }
+    ];
+    db.recebimentos = [
+      { id:'rec_1', os:'OS-001', descricao:'Medição inicial', dataRecebimento:'2026-04-05', valor:10500 },
+      { id:'rec_2', os:'OS-002', descricao:'Sinal de vistoria', dataRecebimento:'2026-04-06', valor:6000 }
+    ];
+    db.repasses = [
+      { id:'rep_1', os:'OS-001', parceiroNome:'Alfa', valorFechadoParceiro:9800 },
+      { id:'rep_2', os:'OS-002', parceiroNome:'Nexus', valorFechadoParceiro:7200 },
+      { id:'rep_3', os:'OS-003', parceiroNome:'Prime', valorFechadoParceiro:15250 }
+    ];
+    db.pagamentosParceiros = [
+      { id:'pag_1', os:'OS-001', descricao:'Adiantamento equipe Alfa', dataVencimento:'2026-04-09', dataPagamentoReal:'2026-04-09', valor:4830, natureza:'pagamento' },
+      { id:'pag_2', os:'OS-003', descricao:'Mobilização Prime', dataVencimento:'2026-04-12', dataPagamentoReal:'', valor:6500, natureza:'pagamento' }
+    ];
+    db.despesas = [
+      { id:'des_1', os:'OS-001', tipoDespesa:'Combustível', dataVencimento:'2026-04-15', dataPagamentoReal:'2026-04-10', valor:626.74, observacoes:'Equipe campo' },
+      { id:'des_2', os:'OS-002', tipoDespesa:'Hospedagem', dataVencimento:'2026-04-18', dataPagamentoReal:'', valor:1246.31, observacoes:'Equipe vistoria' },
+      { id:'des_3', os:'OS-003', tipoDespesa:'Frete', dataVencimento:'2026-04-20', dataPagamentoReal:'', valor:1500, observacoes:'Estrutura metálica' }
+    ];
+    db.despesasGerais = [
+      { id:'ger_1', tipoDespesa:'Internet / Sistemas', dataVencimento:'2026-04-14', dataPagamentoReal:'2026-04-11', valor:1000, observacoes:'Plataformas' },
+      { id:'ger_2', tipoDespesa:'Ferramental', dataVencimento:'2026-04-17', dataPagamentoReal:'', valor:2500, observacoes:'Reposição' }
+    ];
+    db.movimentosCaixa = [
+      { id:'mov_1', tipo:'aporte', natureza:'entrada', data:'2026-04-01', valor:550, descricao:'Capital inicial do período' }
+    ];
+    return db;
   }
 };

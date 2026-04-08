@@ -1,19 +1,17 @@
+
 window.OBRAS = window.OBRAS || {};
 OBRAS.financeiroScreen = {
   render: function(){
-    var m = OBRAS.state.metricas;
-    OBRAS.ui.setHTML('screen-container', '\
-      <div class="screen-head">\
-        <div><h1 class="screen-title">Financeiro</h1><div class="screen-subtitle">Resumo inicial para separar o módulo financeiro da operação.</div></div>\
-        <div class="actions-row"><button class="btn" data-go="dashboard">Voltar ao painel</button></div>\
-      </div>\
-      <div class="kpi-grid">\
-        <div class="kpi-card"><div class="kpi-label">Parceiros a pagar</div><div class="kpi-value">' + OBRAS.helpers.money(m.parceirosPagar) + '</div><div class="kpi-note">Compromissos com parceiros</div></div>\
-        <div class="kpi-card"><div class="kpi-label">Despesas a vencer</div><div class="kpi-value">' + OBRAS.helpers.money(m.despesasVencer) + '</div><div class="kpi-note">Próximas saídas</div></div>\
-        <div class="kpi-card"><div class="kpi-label">Despesas pagas</div><div class="kpi-value">' + OBRAS.helpers.money(m.despesasPagas) + '</div><div class="kpi-note">Baixadas no período</div></div>\
-        <div class="kpi-card"><div class="kpi-label">A receber líquido</div><div class="kpi-value">' + OBRAS.helpers.money(m.receberLiquido) + '</div><div class="kpi-note">Projeção líquida</div></div>\
-      </div>\
-      <div class="empty-card section-space"><h3 class="card-title">Próxima etapa</h3><div class="muted">Na Fase 2, este módulo recebe o motor do seu painel atual: repasses, pagamentos, despesas, fluxo de caixa e sincronização.</div></div>\
-    ');
+    var m = OBRAS.rules.painelMetrics(OBRAS.state);
+    var obrasOpt = OBRAS.state.obras.map(function(o){
+      return '<option value="' + OBRAS.helpers.escape(o.numeroOS) + '">' + OBRAS.helpers.escape(o.numeroOS + ' · ' + o.siteTorre) + '</option>';
+    }).join('');
+    var ultReceb = OBRAS.state.recebimentos.slice().reverse().slice(0,5).map(function(r){
+      return '<div class="list-item"><div><strong>' + OBRAS.helpers.escape(r.os) + '</strong><div class="muted">' + OBRAS.helpers.escape(r.descricao || 'Recebimento') + ' · ' + OBRAS.helpers.formatDate(r.dataRecebimento) + '</div></div><div><strong>' + OBRAS.helpers.money(r.valor) + '</strong></div></div>';
+    }).join('');
+    var ultSaidas = OBRAS.state.despesas.concat(OBRAS.state.despesasGerais).slice().reverse().slice(0,5).map(function(d){
+      return '<div class="list-item"><div><strong>' + OBRAS.helpers.escape(d.os || 'GERAL') + '</strong><div class="muted">' + OBRAS.helpers.escape(d.tipoDespesa || d.observacoes || 'Despesa') + ' · ' + OBRAS.helpers.formatDate(d.dataVencimento) + '</div></div><div><strong>' + OBRAS.helpers.money(d.valor) + '</strong></div></div>';
+    }).join('');
+    OBRAS.ui.setHTML('screen-container', '      <div class="screen-head">        <div><h1 class="screen-title">Financeiro</h1><div class="screen-subtitle">Módulo conectado ao banco local: recebimentos, pagamentos de parceiros e despesas.</div></div>        <div class="actions-row"><button class="btn" data-go="dashboard">Voltar ao painel</button></div>      </div>      <div class="kpi-grid">        <div class="kpi-card"><div class="kpi-label">Parceiros a pagar</div><div class="kpi-value">' + OBRAS.helpers.money(m.saldoParceirosAPagar) + '</div><div class="kpi-note">Saldo ainda previsto para parceiros</div></div>        <div class="kpi-card"><div class="kpi-label">Despesas a vencer</div><div class="kpi-value">' + OBRAS.helpers.money(m.despesasAVencer) + '</div><div class="kpi-note">Saídas ainda não pagas</div></div>        <div class="kpi-card"><div class="kpi-label">Despesas pagas</div><div class="kpi-value">' + OBRAS.helpers.money(m.despesasPagas) + '</div><div class="kpi-note">Baixadas no período</div></div>        <div class="kpi-card"><div class="kpi-label">A receber líquido</div><div class="kpi-value">' + OBRAS.helpers.money(m.caixaProjetado) + '</div><div class="kpi-note">Projeção líquida do caixa</div></div>      </div>      <div class="split-card">        <div class="form-card">          <h3 class="card-title">Lançamento rápido por obra</h3>          <div class="field-grid">            <div class="field"><label>OS</label><select id="fin-os"><option value="">Selecione</option>' + obrasOpt + '</select></div>            <div class="field"><label>Tipo</label><select id="fin-tipo"><option value="recebimento">Recebimento</option><option value="pagamento">Pagamento parceiro</option><option value="despesa">Despesa da obra</option></select></div>            <div class="field"><label>Data</label><input id="fin-data" type="date" value="' + OBRAS.helpers.todayISO() + '" /></div>            <div class="field"><label>Valor</label><input id="fin-valor" type="number" step="0.01" /></div>            <div class="field" style="grid-column:1/-1"><label>Descrição</label><input id="fin-descricao" /></div>          </div>          <div class="form-actions"><button class="btn btn-primary" id="fin-submit-btn">Salvar lançamento</button></div>        </div>        <div class="form-card">          <h3 class="card-title">Despesa geral</h3>          <div class="field-grid">            <div class="field"><label>Tipo</label><input id="geral-tipo" placeholder="Ex: Ferramental" /></div>            <div class="field"><label>Valor</label><input id="geral-valor" type="number" step="0.01" /></div>            <div class="field"><label>Vencimento</label><input id="geral-vencimento" type="date" value="' + OBRAS.helpers.todayISO() + '" /></div>            <div class="field"><label>Marcar como paga</label><div style="padding-top:11px"><input id="geral-paga" type="checkbox" /></div></div>            <div class="field" style="grid-column:1/-1"><label>Observações</label><textarea id="geral-obs"></textarea></div>          </div>          <div class="form-actions"><button class="btn" id="geral-submit-btn">Salvar despesa geral</button></div>        </div>      </div>      <div class="content-grid">        <div class="list-card"><h3 class="card-title">Últimos recebimentos</h3>' + (ultReceb || '<div class="empty-state">Nenhum recebimento lançado.</div>') + '</div>        <div class="list-card"><h3 class="card-title">Últimas saídas</h3>' + (ultSaidas || '<div class="empty-state">Nenhuma saída lançada.</div>') + '</div>      </div>    ');
   }
 };
