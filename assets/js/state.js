@@ -18,7 +18,14 @@ OBRAS.stateApi = {
     db.despesas = Array.isArray(db.despesas) ? db.despesas : [];
     db.despesasGerais = Array.isArray(db.despesasGerais) ? db.despesasGerais : [];
     db.movimentosCaixa = Array.isArray(db.movimentosCaixa) ? db.movimentosCaixa : [];
+    db.despesasFixas = Array.isArray(db.despesasFixas) ? db.despesasFixas : [];
+    db.recurringIgnore = Array.isArray(db.recurringIgnore) ? db.recurringIgnore : [];
     db.form = db.form || {};
+    db.ui = db.ui || {};
+    db.ui.selectedObraId = db.ui.selectedObraId || null;
+    db.ui.obrasFilters = db.ui.obrasFilters || { query:'', status:'todos', cidade:'', parceiro:'', cliente:'' };
+    db.ui.financeFilters = db.ui.financeFilters || { query:'', tipo:'todos', status:'todos', obra:'' };
+    db.cloud = db.cloud || { enabled:true, mode:'automatico', projectUrl: OBRAS.config.SUPABASE_URL, lastSyncAt:'', lastSyncStatus:'Não sincronizado', auto:true, online:false };
     return db;
   },
   buildBaseState: function(forceSeed){
@@ -53,10 +60,13 @@ OBRAS.stateApi = {
     db.despesas = Array.isArray(source.despesas) ? source.despesas : [];
     db.despesasGerais = Array.isArray(source.despesasGerais) ? source.despesasGerais : [];
     db.movimentosCaixa = Array.isArray(source.movimentosCaixa) ? source.movimentosCaixa : [];
+    db.despesasFixas = Array.isArray(source.despesasFixas) ? source.despesasFixas : [];
+    db.recurringIgnore = Array.isArray(source.recurringIgnore) ? source.recurringIgnore : [];
     return db;
   },
   initialize: function(forceSeed){
     OBRAS.state = this.normalizeDB(this.buildBaseState(forceSeed));
+    if (OBRAS.services && OBRAS.services.syncAutoNfExpenses) OBRAS.services.syncAutoNfExpenses();
     OBRAS.state.currentScreen = OBRAS.state.session && OBRAS.state.session.loggedIn ? OBRAS.config.SCREENS.DASHBOARD : OBRAS.config.SCREENS.LOGIN;
     OBRAS.state.form = OBRAS.state.form || {};
   },

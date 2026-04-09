@@ -39,9 +39,25 @@ OBRAS.services = {
       return;
     }
     if (!window.confirm('Importar este backup para a base atual?')) return;
-    OBRAS.state = OBRAS.stateApi.normalizeDB ? OBRAS.stateApi.normalizeDB(obj) : obj;
-    OBRAS.state.currentScreen = OBRAS.config.SCREENS.CONFIGURACOES;
+
+    var normalized = OBRAS.stateApi.normalizeDB ? OBRAS.stateApi.normalizeDB(obj) : obj;
+
+    normalized.session = normalized.session || {};
+    normalized.session.loggedIn = true;
+    normalized.session.userName = normalized.session.userName || (OBRAS.state.session && OBRAS.state.session.userName) || 'Edemilson';
+
+    normalized.currentScreen = OBRAS.config.SCREENS.DASHBOARD;
+    normalized.form = {};
+    normalized.ui = normalized.ui || {};
+    normalized.ui.selectedObraId = null;
+    normalized.ui.obrasFilters = { query:'', status:'todos', cidade:'', parceiro:'', cliente:'' };
+    normalized.ui.financeFilters = { query:'', tipo:'todos', status:'todos', obra:'' };
+
+    OBRAS.state = normalized;
     OBRAS.stateApi.save();
+
+    OBRAS.stateApi.initialize(false);
+    OBRAS.state.currentScreen = OBRAS.config.SCREENS.DASHBOARD;
     OBRAS.app.render();
     OBRAS.ui.toast('Backup importado com sucesso.');
   },
@@ -107,6 +123,158 @@ OBRAS.services = {
     OBRAS.router.goTo(OBRAS.config.SCREENS.CADASTROS);
   },
 
+  setObrasFiltersFromDOM: function(){
+    OBRAS.state.ui = OBRAS.state.ui || {};
+    OBRAS.state.ui.obrasFilters = {
+      query: (document.getElementById('obra-filtro-busca') || {}).value || '',
+      status: (document.getElementById('obra-filtro-status') || {}).value || 'todos',
+      cidade: (document.getElementById('obra-filtro-cidade') || {}).value || '',
+      parceiro: (document.getElementById('obra-filtro-parceiro') || {}).value || '',
+      cliente: (document.getElementById('obra-filtro-cliente') || {}).value || ''
+    };
+    OBRAS.stateApi.save();
+    OBRAS.app.render();
+  },
+
+  clearObrasFilters: function(){
+    OBRAS.state.ui = OBRAS.state.ui || {};
+    OBRAS.state.ui.obrasFilters = { query:'', status:'todos', cidade:'', parceiro:'', cliente:'' };
+    OBRAS.stateApi.save();
+    OBRAS.app.render();
+  },
+
+  setFinanceFiltersFromDOM: function(){
+    OBRAS.state.ui = OBRAS.state.ui || {};
+    OBRAS.state.ui.financeFilters = {
+      query: (document.getElementById('fin-filtro-busca') || {}).value || '',
+      tipo: (document.getElementById('fin-filtro-tipo') || {}).value || 'todos',
+      status: (document.getElementById('fin-filtro-status') || {}).value || 'todos',
+      obra: (document.getElementById('fin-filtro-obra') || {}).value || ''
+    };
+    OBRAS.stateApi.save();
+    OBRAS.app.render();
+  },
+
+  clearFinanceFilters: function(){
+    OBRAS.state.ui = OBRAS.state.ui || {};
+    OBRAS.state.ui.financeFilters = { query:'', tipo:'todos', status:'todos', obra:'' };
+    OBRAS.stateApi.save();
+    OBRAS.app.render();
+  },
+
+
+  autofillObraFromSelectedOS: function(){
+    var osValue = (document.getElementById('obra-numero-os') || {}).value || '';
+    if (!osValue) return;
+    var obra = (OBRAS.state.obras || []).find(function(x){ return x.numeroOS === osValue; });
+    if (!obra) return;
+    var setVal = function(id, value){
+      var el = document.getElementById(id);
+      if (el && !el.value) el.value = value || '';
+    };
+    setVal('obra-nome', obra.siteTorre);
+    setVal('obra-cidade', obra.cidade);
+    setVal('obra-valor', obra.valorObra);
+    setVal('obra-parceiro', obra.parceiroNome);
+    setVal('obra-cliente', obra.clienteNome);
+    setVal('obra-etapa', obra.etapa);
+    var statusEl = document.getElementById('obra-status');
+    if (statusEl && !statusEl.value) statusEl.value = obra.statusObra || 'Planejado';
+    setVal('obra-data', obra.dataAbertura);
+  },
+
+  openObraDetail: function(id){
+    var obra = (OBRAS.state.obras || []).find(function(x){ return x.id === id; });
+    if (!obra) {
+      OBRAS.ui.toast('Obra não encontrada.');
+      return;
+    }
+    OBRAS.state.ui = OBRAS.state.ui || {};
+    OBRAS.state.ui.selectedObraId = id;
+    OBRAS.stateApi.save();
+    OBRAS.router.goTo(OBRAS.config.SCREENS.OBRA_DETALHE);
+  },
+
+  getSelectedObra: function(){
+    var id = OBRAS.state.ui && OBRAS.state.ui.selectedObraId;
+    if (!id) return null;
+    return (OBRAS.state.obras || []).find(function(x){ return x.id === id; }) || null;
+  },
+
+  submitObraRecebimento: function(){
+    var obra = this.getSelectedObra();
+    if (!obra) return;
+    var valor = OBRAS.helpers.toNumber(document.getElementById('det-rec-valor').value);
+    var data = document.getElementById('det-rec-data').value || OBRAS.helpers.today();
+    var obs = document.getElementById('det-rec-obs').value.trim();
+    if (!valor) { OBRAS.ui.toast('Informe o valor do recebimento.'); return; }
+    OBRAS.state.recebimentos.push({
+      id: OBRAS.helpers.uid('rec'),
+      obraId: obra.id,
+      os: obra.numeroOS,
+      valor: valor,
+      data: data,
+      dataRecebimento: data,
+      observacao: obs,
+      descricao: obs || 'Recebimento',
+      status: 'recebido'
+    });
+    OBRAS.stateApi.save();
+    OBRAS.app.render();
+    OBRAS.ui.toast('Recebimento lançado.');
+  },
+
+  submitObraPagamento: function(){
+    var obra = this.getSelectedObra();
+    if (!obra) return;
+    var valor = OBRAS.helpers.toNumber(document.getElementById('det-pag-valor').value);
+    var data = document.getElementById('det-pag-data').value || OBRAS.helpers.today();
+    var obs = document.getElementById('det-pag-obs').value.trim();
+    if (!valor) { OBRAS.ui.toast('Informe o valor do pagamento.'); return; }
+    OBRAS.state.pagamentosParceiros.push({
+      id: OBRAS.helpers.uid('pag'),
+      obraId: obra.id,
+      os: obra.numeroOS,
+      valor: valor,
+      data: data,
+      dataVencimento: data,
+      dataPagamentoReal: data,
+      observacao: obs,
+      descricao: obs || 'Pagamento parceiro',
+      status: 'pago'
+    });
+    OBRAS.stateApi.save();
+    OBRAS.app.render();
+    OBRAS.ui.toast('Pagamento parceiro lançado.');
+  },
+
+  submitObraDespesa: function(){
+    var obra = this.getSelectedObra();
+    if (!obra) return;
+    var valor = OBRAS.helpers.toNumber(document.getElementById('det-desp-valor').value);
+    var data = document.getElementById('det-desp-data').value || OBRAS.helpers.today();
+    var tipo = document.getElementById('det-desp-tipo').value || 'obra';
+    var obs = document.getElementById('det-desp-obs').value.trim();
+    if (!valor) { OBRAS.ui.toast('Informe o valor da despesa.'); return; }
+    OBRAS.state.despesas.push({
+      id: OBRAS.helpers.uid('desp'),
+      obraId: obra.id,
+      os: obra.numeroOS,
+      valor: valor,
+      data: data,
+      dataVencimento: data,
+      dataPagamentoReal: data,
+      tipo: tipo,
+      tipoDespesa: tipo,
+      observacao: obs,
+      observacoes: obs,
+      status: 'pago'
+    });
+    OBRAS.stateApi.save();
+    OBRAS.app.render();
+    OBRAS.ui.toast('Despesa da obra lançada.');
+  },
+
   loginLocal: function(name){
     OBRAS.state.session.loggedIn = true;
     OBRAS.state.session.userName = name || 'Edemilson';
@@ -167,6 +335,7 @@ OBRAS.services = {
     var idx = OBRAS.state.obras.findIndex(function(x){ return x.id === payload.id; });
     if (idx >= 0) OBRAS.state.obras[idx] = payload;
     else OBRAS.state.obras.push(payload);
+    OBRAS.services.syncAutoNfExpenses();
     OBRAS.state.form = {};
     OBRAS.stateApi.save();
     OBRAS.router.goTo(OBRAS.config.SCREENS.OBRAS);
@@ -246,5 +415,692 @@ OBRAS.services = {
     OBRAS.stateApi.save();
     OBRAS.app.render();
     OBRAS.ui.toast('Despesa geral registrada.');
-  }
+  },
+
+  generateResumoRelatorio: function(){
+    var m = OBRAS.rules.painelMetrics(OBRAS.state);
+    var linhas = [];
+    linhas.push('RELATÓRIO GERAL - CONTROLE DE OBRAS');
+    linhas.push('Gerado em: ' + new Date().toLocaleString('pt-BR'));
+    linhas.push('');
+    linhas.push('Receita contratada: ' + OBRAS.helpers.money(m.receitaContratada));
+    linhas.push('Receita recebida: ' + OBRAS.helpers.money(m.receitaRecebida));
+    linhas.push('A receber: ' + OBRAS.helpers.money(m.aReceberObras));
+    linhas.push('A pagar previsto: ' + OBRAS.helpers.money(m.aPagarPrevisto));
+    linhas.push('Caixa realizado: ' + OBRAS.helpers.money(m.caixaRealizado));
+    linhas.push('Caixa projetado: ' + OBRAS.helpers.money(m.caixaProjetado));
+    linhas.push('');
+    linhas.push('OBRAS:');
+    (m.obras || []).forEach(function(o){
+      linhas.push('- ' + o.numeroOS + ' | ' + o.nome + ' | Parceiro ' + (o.parceiroNome || '-') + ' | Cliente ' + (o.clienteNome || '-') + ' | Contrato ' + OBRAS.helpers.money(o.valorObra) + ' | Recebido ' + OBRAS.helpers.money(o.totalRecebido) + ' | A receber ' + OBRAS.helpers.money(o.saldoReceber) + ' | Resultado ' + OBRAS.helpers.money(o.resultadoLiquido));
+    });
+    return linhas.join('\n');
+  },
+
+  exportRelatorioTXT: function(){
+    try {
+      var content = this.generateResumoRelatorio();
+      var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'relatorio-controle-obras.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      OBRAS.ui.toast('Relatório exportado em TXT.');
+    } catch (err) {
+      OBRAS.ui.toast('Falha ao exportar relatório.');
+      if (window.console) console.error(err);
+    }
+  },
+
+
+
+  getSupabaseClient: function(){
+    if (!window.supabase || !window.supabase.createClient) {
+      throw new Error('Biblioteca Supabase não carregada.');
+    }
+    if (!OBRAS._supabaseClient) {
+      OBRAS._supabaseClient = window.supabase.createClient(
+        OBRAS.config.SUPABASE_URL,
+        OBRAS.config.SUPABASE_ANON_KEY
+      );
+    }
+    return OBRAS._supabaseClient;
+  },
+
+  cloudEnabled: function(){
+    return !!(OBRAS.state.cloud && OBRAS.state.cloud.enabled !== false && OBRAS.config.AUTO_SYNC_ENABLED);
+  },
+
+  nextCode: function(prefix, index){
+    return prefix + '-' + String(index + 1).padStart(3, '0');
+  },
+
+  sameName: function(a, b){
+    return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+  },
+
+  markCloudStatus: function(status){
+    OBRAS.state.cloud = OBRAS.state.cloud || {};
+    OBRAS.state.cloud.projectUrl = OBRAS.config.SUPABASE_URL;
+    OBRAS.state.cloud.enabled = true;
+    OBRAS.state.cloud.mode = 'automatico';
+    OBRAS.state.cloud.auto = true;
+    OBRAS.state.cloud.online = !!navigator.onLine;
+    OBRAS.state.cloud.lastSyncAt = new Date().toISOString();
+    OBRAS.state.cloud.lastSyncStatus = status;
+  },
+
+  maxRemoteUpdatedAt: function(snapshot){
+    var dates = [];
+    Object.keys(snapshot || {}).forEach(function(key){
+      (snapshot[key] || []).forEach(function(row){
+        if (row && row.updated_at) dates.push(String(row.updated_at));
+        if (row && row.created_at) dates.push(String(row.created_at));
+      });
+    });
+    return dates.sort().slice(-1)[0] || '';
+  },
+
+  remoteHasData: function(snapshot){
+    return Object.keys(snapshot || {}).some(function(key){ return (snapshot[key] || []).length > 0; });
+  },
+
+  inferSeqOS: function(obras){
+    return (obras || []).reduce(function(max, item){
+      var n = parseInt(String(item.numeroOS || item.numero_os || '').replace(/[^0-9]/g,''), 10);
+      return isNaN(n) ? max : Math.max(max, n);
+    }, 0);
+  },
+
+  buildSupabaseRows: function(){
+    OBRAS.services.syncAutoNfExpenses();
+    var db = OBRAS.state;
+    var now = new Date().toISOString();
+
+    var empresas = (db.empresas || []).map(function(item, i){
+      return {
+        id: item.id || OBRAS.helpers.uid('empresas'),
+        codigo: item.codigo || OBRAS.services.nextCode('EO', i),
+        nome: item.nome || '',
+        observacoes: item.observacoes || item.contato || '',
+        created_at: item.createdAt || item.created_at || now,
+        updated_at: item.updatedAt || item.updated_at || now
+      };
+    });
+
+    var clientes = (db.clientes || []).map(function(item, i){
+      return {
+        id: item.id || OBRAS.helpers.uid('clientes'),
+        codigo: item.codigo || OBRAS.services.nextCode('CL', i),
+        nome: item.nome || '',
+        observacoes: item.observacoes || item.contato || '',
+        created_at: item.createdAt || item.created_at || now,
+        updated_at: item.updatedAt || item.updated_at || now
+      };
+    });
+
+    var parceiros = (db.parceiros || []).map(function(item, i){
+      return {
+        id: item.id || OBRAS.helpers.uid('parceiros'),
+        codigo: item.codigo || OBRAS.services.nextCode('PA', i),
+        nome: item.nome || '',
+        observacoes: item.observacoes || item.contato || '',
+        created_at: item.createdAt || item.created_at || now,
+        updated_at: item.updatedAt || item.updated_at || now
+      };
+    });
+
+    function findEmpresaByName(name){
+      return empresas.find(function(x){ return OBRAS.services.sameName(x.nome, name); }) || null;
+    }
+    function findClienteByName(name){
+      return clientes.find(function(x){ return OBRAS.services.sameName(x.nome, name); }) || null;
+    }
+    function findParceiroByName(name){
+      return parceiros.find(function(x){ return OBRAS.services.sameName(x.nome, name); }) || null;
+    }
+
+    var obras = (db.obras || []).map(function(item){
+      var emp = findEmpresaByName(item.empresaNome || (db.empresa && db.empresa.nome) || '');
+      var cli = findClienteByName(item.clienteNome || '');
+      return {
+        id: item.id || OBRAS.helpers.uid('obra'),
+        numero_os: item.numeroOS || item.os || '',
+        data_abertura: item.dataAbertura || OBRAS.helpers.todayISO(),
+        empresa_id: item.empresaId || (emp ? emp.id : null),
+        empresa_nome: item.empresaNome || (emp ? emp.nome : ((db.empresa && db.empresa.nome) || 'TELESITES')),
+        cliente_id: item.clienteId || (cli ? cli.id : null),
+        cliente_nome: item.clienteNome || (cli ? cli.nome : ''),
+        site_torre: item.siteTorre || item.nome || '',
+        cidade: item.cidade || '',
+        status_obra: item.statusObra || 'Planejado',
+        valor_obra: Number(item.valorObra || 0),
+        observacoes: item.observacoes || '',
+        status_ciclo_os: item.statusCicloOS || 'Ativa',
+        created_at: item.createdAt || item.created_at || now,
+        updated_at: item.updatedAt || item.updated_at || now
+      };
+    });
+
+    var repasses = (db.repasses || []).map(function(item){
+      var par = findParceiroByName(item.parceiroNome || '');
+      return {
+        id: item.id || OBRAS.helpers.uid('rep'),
+        os: item.os || '',
+        parceiro_id: item.parceiroId || (par ? par.id : null),
+        parceiro_nome: item.parceiroNome || (par ? par.nome : ''),
+        valor_fechado_parceiro: Number(item.valorFechadoParceiro || 0),
+        observacoes: item.observacoes || '',
+        created_at: item.createdAt || item.created_at || now,
+        updated_at: item.updatedAt || item.updated_at || now
+      };
+    });
+
+    var recebimentos = (db.recebimentos || []).map(function(item){
+      return {
+        id: item.id || OBRAS.helpers.uid('rec'),
+        os: item.os || '',
+        data_recebimento: item.dataRecebimento || item.data || OBRAS.helpers.todayISO(),
+        descricao: item.descricao || '',
+        valor: Number(item.valor || 0),
+        observacoes: item.observacoes || item.observacao || '',
+        created_at: item.createdAt || item.created_at || now,
+        updated_at: item.updatedAt || item.updated_at || now
+      };
+    });
+
+    var pagamentos = (db.pagamentosParceiros || []).map(function(item){
+      return {
+        id: item.id || OBRAS.helpers.uid('pag'),
+        os: item.os || '',
+        competencia: item.competencia || ((item.dataVencimento || OBRAS.helpers.todayISO()).slice(0,7)),
+        data_vencimento: item.dataVencimento || item.data || OBRAS.helpers.todayISO(),
+        data_pagamento_real: item.dataPagamentoReal || null,
+        natureza: item.natureza || 'pagamento',
+        valor: Number(item.valor || 0),
+        descricao: item.descricao || '',
+        observacoes: item.observacoes || item.observacao || '',
+        created_at: item.createdAt || item.created_at || now,
+        updated_at: item.updatedAt || item.updated_at || now
+      };
+    });
+
+    var despesas = (db.despesas || []).map(function(item){
+      return {
+        id: item.id || OBRAS.helpers.uid('desp'),
+        os: item.os || '',
+        competencia: item.competencia || ((item.dataVencimento || OBRAS.helpers.todayISO()).slice(0,7)),
+        data_despesa: item.dataDespesa || item.data || item.dataVencimento || OBRAS.helpers.todayISO(),
+        tipo_despesa: item.tipoDespesa || 'Despesa obra',
+        data_vencimento: item.dataVencimento || item.data || OBRAS.helpers.todayISO(),
+        data_pagamento_real: item.dataPagamentoReal || null,
+        valor: Number(item.valor || 0),
+        origem_custo: item.origemCusto || '',
+        obs_outras_despesas: item.obsOutrasDespesas || '',
+        observacoes: item.observacoes || item.observacao || '',
+        gerada_automaticamente: !!item.geradaAutomaticamente,
+        created_at: item.createdAt || item.created_at || now,
+        updated_at: item.updatedAt || item.updated_at || now
+      };
+    });
+
+    var despesasGerais = (db.despesasGerais || []).map(function(item){
+      return {
+        id: item.id || OBRAS.helpers.uid('despgeral'),
+        competencia: item.competencia || ((item.dataVencimento || OBRAS.helpers.todayISO()).slice(0,7)),
+        tipo_despesa: item.tipoDespesa || 'Despesa geral',
+        data_vencimento: item.dataVencimento || OBRAS.helpers.todayISO(),
+        data_pagamento_real: item.dataPagamentoReal || null,
+        descricao: item.descricao || '',
+        valor: Number(item.valor || 0),
+        origem: item.origem || '',
+        observacoes: item.observacoes || '',
+        gerada_automaticamente: !!item.geradaAutomaticamente,
+        regra_fixa_id: item.regraFixaId || item.recorrenciaId || null,
+        ignorada: !!item.ignorada,
+        created_at: item.createdAt || item.created_at || now,
+        updated_at: item.updatedAt || item.updated_at || now
+      };
+    });
+
+    var movimentosCaixa = (db.movimentosCaixa || []).map(function(item){
+      return {
+        id: item.id || OBRAS.helpers.uid('mov'),
+        data_movimento: item.dataMovimento || item.data || OBRAS.helpers.todayISO(),
+        tipo: item.tipo || item.natureza || 'movimento',
+        descricao: item.descricao || '',
+        valor: Number(item.valor || 0),
+        observacoes: item.observacoes || '',
+        created_at: item.createdAt || item.created_at || now,
+        updated_at: item.updatedAt || item.updated_at || now
+      };
+    });
+
+    var despesasFixas = (db.despesasFixas || []).map(function(item){
+      return {
+        id: item.id || OBRAS.helpers.uid('fixa'),
+        tipo_despesa: item.tipoDespesa || '',
+        descricao: item.descricao || '',
+        valor: Number(item.valor || 0),
+        dia_fixo: Number(item.diaFixo || 1),
+        competencia_inicio: item.competenciaInicio || OBRAS.helpers.todayISO().slice(0,7),
+        ativa: item.ativa !== false,
+        created_at: item.createdAt || item.created_at || now,
+        updated_at: item.updatedAt || item.updated_at || now
+      };
+    });
+
+    var ignorados = (db.recurringIgnore || []).map(function(item){
+      return {
+        id: item.id || OBRAS.helpers.uid('ign'),
+        regra_fixa_id: item.regraFixaId || item.regra_fixa_id || '',
+        competencia: item.competencia || ''
+      };
+    });
+
+    return {
+      empresas: empresas,
+      clientes: clientes,
+      parceiros: parceiros,
+      obras: obras,
+      repasses: repasses,
+      recebimentos: recebimentos,
+      pagamentos_parceiros: pagamentos,
+      despesas: despesas,
+      despesas_gerais: despesasGerais,
+      movimentos_caixa: movimentosCaixa,
+      despesas_fixas: despesasFixas,
+      ignorados_recorrencia: ignorados
+    };
+  },
+
+  fetchRemoteSnapshot: async function(){
+    var client = this.getSupabaseClient();
+    var tables = ['empresas','clientes','parceiros','obras','repasses','recebimentos','pagamentos_parceiros','despesas','despesas_gerais','movimentos_caixa','despesas_fixas','ignorados_recorrencia'];
+    var out = {};
+    for (var i = 0; i < tables.length; i += 1) {
+      var t = tables[i];
+      var result = await client.from(t).select('*');
+      if (result.error) throw result.error;
+      out[t] = result.data || [];
+    }
+    return out;
+  },
+
+  applyRemoteSnapshot: function(snapshot){
+    var db = OBRAS.models.createEmptyDB();
+    db.session = OBRAS.state.session || db.session;
+    db.session.loggedIn = true;
+    db.empresa = OBRAS.state.empresa || db.empresa;
+
+    db.empresas = (snapshot.empresas || []).map(function(r){
+      return { id:r.id, codigo:r.codigo || '', nome:r.nome || '', observacoes:r.observacoes || '', createdAt:r.created_at || '', updatedAt:r.updated_at || '' };
+    });
+
+    db.clientes = (snapshot.clientes || []).map(function(r){
+      return { id:r.id, codigo:r.codigo || '', nome:r.nome || '', observacoes:r.observacoes || '', createdAt:r.created_at || '', updatedAt:r.updated_at || '' };
+    });
+
+    db.parceiros = (snapshot.parceiros || []).map(function(r){
+      return { id:r.id, codigo:r.codigo || '', nome:r.nome || '', observacoes:r.observacoes || '', createdAt:r.created_at || '', updatedAt:r.updated_at || '' };
+    });
+
+    var repassesByOS = {};
+    (snapshot.repasses || []).forEach(function(r){ repassesByOS[r.os] = r; });
+
+    db.obras = (snapshot.obras || []).map(function(r){
+      var rep = repassesByOS[r.numero_os] || null;
+      return {
+        id: r.id,
+        numeroOS: r.numero_os,
+        dataAbertura: r.data_abertura || '',
+        empresaId: r.empresa_id || '',
+        empresaNome: r.empresa_nome || '',
+        clienteId: r.cliente_id || '',
+        clienteNome: r.cliente_nome || '',
+        siteTorre: r.site_torre || '',
+        cidade: r.cidade || '',
+        statusObra: r.status_obra || 'Planejado',
+        valorObra: Number(r.valor_obra || 0),
+        observacoes: r.observacoes || '',
+        statusCicloOS: r.status_ciclo_os || 'Ativa',
+        parceiroNome: rep ? (rep.parceiro_nome || '') : '',
+        etapa: '',
+        createdAt: r.created_at || '',
+        updatedAt: r.updated_at || ''
+      };
+    });
+
+    db.repasses = (snapshot.repasses || []).map(function(r){
+      return {
+        id: r.id,
+        os: r.os,
+        parceiroId: r.parceiro_id || '',
+        parceiroNome: r.parceiro_nome || '',
+        valorFechadoParceiro: Number(r.valor_fechado_parceiro || 0),
+        observacoes: r.observacoes || '',
+        createdAt: r.created_at || '',
+        updatedAt: r.updated_at || ''
+      };
+    });
+
+    db.recebimentos = (snapshot.recebimentos || []).map(function(r){
+      return {
+        id: r.id,
+        os: r.os,
+        dataRecebimento: r.data_recebimento || '',
+        descricao: r.descricao || '',
+        valor: Number(r.valor || 0),
+        observacoes: r.observacoes || '',
+        createdAt: r.created_at || '',
+        updatedAt: r.updated_at || ''
+      };
+    });
+
+    db.pagamentosParceiros = (snapshot.pagamentos_parceiros || []).map(function(r){
+      return {
+        id: r.id,
+        os: r.os,
+        competencia: r.competencia || '',
+        dataVencimento: r.data_vencimento || '',
+        dataPagamentoReal: r.data_pagamento_real || '',
+        natureza: r.natureza || 'pagamento',
+        valor: Number(r.valor || 0),
+        descricao: r.descricao || '',
+        observacoes: r.observacoes || '',
+        createdAt: r.created_at || '',
+        updatedAt: r.updated_at || ''
+      };
+    });
+
+    db.despesas = (snapshot.despesas || []).map(function(r){
+      return {
+        id: r.id,
+        os: r.os,
+        competencia: r.competencia || '',
+        dataDespesa: r.data_despesa || '',
+        tipoDespesa: r.tipo_despesa || '',
+        dataVencimento: r.data_vencimento || '',
+        dataPagamentoReal: r.data_pagamento_real || '',
+        valor: Number(r.valor || 0),
+        origemCusto: r.origem_custo || '',
+        obsOutrasDespesas: r.obs_outras_despesas || '',
+        observacoes: r.observacoes || '',
+        geradaAutomaticamente: !!r.gerada_automaticamente,
+        createdAt: r.created_at || '',
+        updatedAt: r.updated_at || ''
+      };
+    });
+
+    db.despesasGerais = (snapshot.despesas_gerais || []).map(function(r){
+      return {
+        id: r.id,
+        competencia: r.competencia || '',
+        tipoDespesa: r.tipo_despesa || '',
+        dataVencimento: r.data_vencimento || '',
+        dataPagamentoReal: r.data_pagamento_real || '',
+        descricao: r.descricao || '',
+        valor: Number(r.valor || 0),
+        origem: r.origem || '',
+        observacoes: r.observacoes || '',
+        geradaAutomaticamente: !!r.gerada_automaticamente,
+        regraFixaId: r.regra_fixa_id || '',
+        ignorada: !!r.ignorada,
+        createdAt: r.created_at || '',
+        updatedAt: r.updated_at || ''
+      };
+    });
+
+    db.movimentosCaixa = (snapshot.movimentos_caixa || []).map(function(r){
+      return {
+        id: r.id,
+        dataMovimento: r.data_movimento || '',
+        data: r.data_movimento || '',
+        tipo: r.tipo || '',
+        natureza: r.tipo || '',
+        descricao: r.descricao || '',
+        valor: Number(r.valor || 0),
+        observacoes: r.observacoes || '',
+        createdAt: r.created_at || '',
+        updatedAt: r.updated_at || ''
+      };
+    });
+
+    db.despesasFixas = (snapshot.despesas_fixas || []).map(function(r){
+      return {
+        id: r.id,
+        tipoDespesa: r.tipo_despesa || '',
+        descricao: r.descricao || '',
+        valor: Number(r.valor || 0),
+        diaFixo: Number(r.dia_fixo || 1),
+        competenciaInicio: r.competencia_inicio || '',
+        ativa: !!r.ativa,
+        createdAt: r.created_at || '',
+        updatedAt: r.updated_at || ''
+      };
+    });
+
+    db.recurringIgnore = (snapshot.ignorados_recorrencia || []).map(function(r){
+      return {
+        id: r.id,
+        regraFixaId: r.regra_fixa_id || '',
+        competencia: r.competencia || ''
+      };
+    });
+
+    db.meta.updatedAt = this.maxRemoteUpdatedAt(snapshot) || new Date().toISOString();
+    db.meta.seqOS = this.inferSeqOS(db.obras);
+    db.meta.importedFromLegacy = false;
+    db.cloud = OBRAS.state.cloud || {};
+    db.cloud.enabled = true;
+    db.cloud.auto = true;
+    db.cloud.mode = 'automatico';
+    db.cloud.projectUrl = OBRAS.config.SUPABASE_URL;
+    db.cloud.lastSyncAt = new Date().toISOString();
+    db.cloud.lastSyncStatus = 'Base remota carregada';
+    db.cloud.online = true;
+    db.ui = OBRAS.state.ui || db.ui;
+    db.form = {};
+    db.currentScreen = OBRAS.config.SCREENS.DASHBOARD;
+    return OBRAS.stateApi.normalizeDB(db);
+  },
+
+  syncDeleteAndUpsert: async function(client, tableName, rows){
+    var existing = await client.from(tableName).select('id');
+    if (existing.error) throw existing.error;
+    var incomingIds = {};
+    (rows || []).forEach(function(r){ incomingIds[r.id] = true; });
+    var toDelete = (existing.data || []).map(function(r){ return r.id; }).filter(function(id){
+      return !incomingIds[id];
+    });
+
+    if (toDelete.length) {
+      var del = await client.from(tableName).delete().in('id', toDelete);
+      if (del.error) throw del.error;
+    }
+
+    if (rows && rows.length) {
+      var up = await client.from(tableName).upsert(rows, { onConflict: 'id' });
+      if (up.error) throw up.error;
+    }
+  },
+
+  uploadAllToSupabase: async function(showToast){
+    if (!this.cloudEnabled() || !navigator.onLine) return;
+    var client = this.getSupabaseClient();
+    var rows = this.buildSupabaseRows();
+
+    await this.syncDeleteAndUpsert(client, 'despesas', rows.despesas);
+    await this.syncDeleteAndUpsert(client, 'pagamentos_parceiros', rows.pagamentos_parceiros);
+    await this.syncDeleteAndUpsert(client, 'recebimentos', rows.recebimentos);
+    await this.syncDeleteAndUpsert(client, 'repasses', rows.repasses);
+    await this.syncDeleteAndUpsert(client, 'movimentos_caixa', rows.movimentos_caixa);
+    await this.syncDeleteAndUpsert(client, 'despesas_gerais', rows.despesas_gerais);
+    await this.syncDeleteAndUpsert(client, 'despesas_fixas', rows.despesas_fixas);
+    await this.syncDeleteAndUpsert(client, 'ignorados_recorrencia', rows.ignorados_recorrencia);
+    await this.syncDeleteAndUpsert(client, 'obras', rows.obras);
+    await this.syncDeleteAndUpsert(client, 'parceiros', rows.parceiros);
+    await this.syncDeleteAndUpsert(client, 'clientes', rows.clientes);
+    await this.syncDeleteAndUpsert(client, 'empresas', rows.empresas);
+
+    this.markCloudStatus('Sync automática enviada');
+    OBRAS.storage.save(OBRAS.state, OBRAS.config.STORAGE_KEY);
+    if (showToast) OBRAS.ui.toast('Sincronizado com Supabase.');
+  },
+
+  bootstrapAutoSync: async function(){
+    OBRAS.state.cloud = OBRAS.state.cloud || {};
+    OBRAS.state.cloud.online = !!navigator.onLine;
+
+    if (!this.cloudEnabled()) {
+      OBRAS.state.cloud.lastSyncStatus = 'Sync desativada';
+      OBRAS.storage.save(OBRAS.state, OBRAS.config.STORAGE_KEY);
+      return;
+    }
+    if (!navigator.onLine) {
+      OBRAS.state.cloud.lastSyncStatus = 'Offline';
+      OBRAS.storage.save(OBRAS.state, OBRAS.config.STORAGE_KEY);
+      return;
+    }
+
+    try {
+      var snapshot = await this.fetchRemoteSnapshot();
+      if (this.remoteHasData(snapshot)) {
+        OBRAS.state = this.applyRemoteSnapshot(snapshot);
+        OBRAS.stateApi.save();
+        OBRAS.app.render();
+        OBRAS.ui.toast('Base carregada do Supabase.');
+        return;
+      }
+
+      this.syncAutoNfExpenses();
+      await this.uploadAllToSupabase(false);
+      this.markCloudStatus('Primeira publicação enviada');
+      OBRAS.storage.save(OBRAS.state, OBRAS.config.STORAGE_KEY);
+      OBRAS.app.render();
+    } catch (err) {
+      console.error(err);
+      OBRAS.state.cloud = OBRAS.state.cloud || {};
+      OBRAS.state.cloud.online = !!navigator.onLine;
+      OBRAS.state.cloud.lastSyncStatus = 'Erro na sync: ' + (err.message || 'falha');
+      OBRAS.storage.save(OBRAS.state, OBRAS.config.STORAGE_KEY);
+      OBRAS.app.render();
+    }
+  },
+
+  enableAutoSaveSync: function(){
+    if (OBRAS._autoSaveSyncEnabled) return;
+    OBRAS._autoSaveSyncEnabled = true;
+    var originalSave = OBRAS.stateApi.save.bind(OBRAS.stateApi);
+    OBRAS.stateApi.save = function(){
+      originalSave();
+      clearTimeout(OBRAS._cloudSyncDebounce);
+      OBRAS._cloudSyncDebounce = setTimeout(function(){
+        OBRAS.services.uploadAllToSupabase(false).catch(function(err){
+          console.error(err);
+          OBRAS.state.cloud = OBRAS.state.cloud || {};
+          OBRAS.state.cloud.lastSyncStatus = 'Erro ao enviar: ' + (err.message || 'falha');
+          OBRAS.storage.save(OBRAS.state, OBRAS.config.STORAGE_KEY);
+        });
+      }, 900);
+    };
+  },
+
+  forceCloudDownload: async function(){
+    try {
+      var snapshot = await this.fetchRemoteSnapshot();
+      if (!this.remoteHasData(snapshot)) {
+        OBRAS.ui.toast('Nenhum dado na nuvem.');
+        return;
+      }
+      OBRAS.state = this.applyRemoteSnapshot(snapshot);
+      OBRAS.stateApi.save();
+      OBRAS.app.render();
+      OBRAS.ui.toast('Base baixada da nuvem.');
+    } catch (err) {
+      console.error(err);
+      OBRAS.ui.toast('Erro ao baixar da nuvem.');
+    }
+  },
+
+  forceCloudUpload: async function(){
+    try {
+      await this.uploadAllToSupabase(true);
+      OBRAS.app.render();
+    } catch (err) {
+      console.error(err);
+      OBRAS.ui.toast('Erro ao enviar para a nuvem.');
+    }
+  },
+
+
+  roundMoney: function(value){
+    return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+  },
+
+  nextMonthDueDate: function(baseDate){
+    var d = String(baseDate || OBRAS.helpers.todayISO()).split('-');
+    var y = Number(d[0] || new Date().getFullYear());
+    var m = Number(d[1] || (new Date().getMonth()+1));
+    m += 1;
+    if (m > 12) { m = 1; y += 1; }
+    return String(y) + '-' + String(m).padStart(2,'0') + '-20';
+  },
+
+  ensureAutoNfExpenseForObra: function(obra){
+    if (!obra || !obra.numeroOS) return;
+    var valor = this.roundMoney(Number(obra.valorObra || 0) * 0.06);
+    var dataBase = obra.dataAbertura || OBRAS.helpers.todayISO();
+    var competencia = String(dataBase).slice(0,7);
+    var existing = (OBRAS.state.despesas || []).find(function(d){
+      return d.os === obra.numeroOS && (
+        d.origemLancamento === 'automatico_obra_nf' ||
+        d.geradaAutomaticamente === true ||
+        String(d.tipoDespesa || '').toLowerCase() === 'imposto nf'
+      );
+    });
+
+    var payload = {
+      id: existing ? existing.id : ('desp_nf_' + obra.id),
+      os: obra.numeroOS,
+      competencia: competencia,
+      dataDespesa: dataBase,
+      tipoDespesa: 'Imposto NF',
+      dataVencimento: this.nextMonthDueDate(dataBase),
+      dataPagamentoReal: existing ? (existing.dataPagamentoReal || '') : '',
+      valor: valor,
+      origemCusto: existing ? (existing.origemCusto || 'Caixa da Empresa') : 'Caixa da Empresa',
+      obsOutrasDespesas: existing ? (existing.obsOutrasDespesas || '') : '',
+      observacoes: existing ? (existing.observacoes || 'NF automática gerada pela obra') : 'NF automática gerada pela obra',
+      geradaAutomaticamente: true,
+      origemLancamento: 'automatico_obra_nf',
+      createdAt: existing ? (existing.createdAt || '') : new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    if (existing) {
+      var idx = OBRAS.state.despesas.findIndex(function(d){ return d.id === existing.id; });
+      if (idx >= 0) OBRAS.state.despesas[idx] = payload;
+    } else {
+      OBRAS.state.despesas.push(payload);
+    }
+  },
+
+  syncAutoNfExpenses: function(){
+    OBRAS.state.despesas = Array.isArray(OBRAS.state.despesas) ? OBRAS.state.despesas : [];
+    (OBRAS.state.obras || []).forEach(function(obra){
+      OBRAS.services.ensureAutoNfExpenseForObra(obra);
+    });
+    var validOS = {};
+    (OBRAS.state.obras || []).forEach(function(obra){ validOS[obra.numeroOS] = true; });
+    OBRAS.state.despesas = OBRAS.state.despesas.filter(function(d){
+      if (d.origemLancamento !== 'automatico_obra_nf' && d.geradaAutomaticamente !== true) return true;
+      return !!validOS[d.os];
+    });
+  },
+
 };

@@ -42,7 +42,7 @@ OBRAS.dashboardScreen = {
       var avisos = OBRAS.rules.avisos(db, m);
 
       var rows = m.obras.slice(0, 5).map(function(obra){
-        return '<tr class="click-row" data-go="obras">'
+        return '<tr class="click-row" data-action="open-obra" data-id="' + obra.id + '">'
           + '<td>' + OBRAS.helpers.escape(obra.numeroOS) + '</td>'
           + '<td>' + OBRAS.helpers.escape(obra.nome) + '</td>'
           + '<td>' + OBRAS.helpers.escape(obra.cidade) + '</td>'

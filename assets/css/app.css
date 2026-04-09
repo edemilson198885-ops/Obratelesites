@@ -228,3 +228,308 @@ body{min-height:100vh}
 .click-row:hover td{
   background:#f8fbff;
 }
+
+
+.detail-hero{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:18px;
+  background:#fff;
+  border:1px solid #dbe4f0;
+  border-radius:24px;
+  padding:22px 24px;
+  margin-bottom:18px;
+}
+.detail-hero h2{
+  margin:6px 0 8px;
+  font-size:34px;
+  line-height:1.05;
+  color:#0b2149;
+}
+.detail-badges{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.detail-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:18px;
+  margin-top:18px;
+}
+.inline-form{
+  display:grid;
+  grid-template-columns:1fr 1fr 1.4fr auto;
+  gap:10px;
+  margin-bottom:14px;
+}
+.split-card{
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:18px;
+}
+.field-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+}
+.field{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.field label{
+  font-size:13px;
+  color:#5c7295;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+.field input,.field select{
+  min-height:46px;
+  border:1px solid #dbe4f0;
+  border-radius:14px;
+  padding:0 14px;
+  font-size:15px;
+  background:#fff;
+}
+.form-card{
+  background:#fff;
+  border:1px solid #dbe4f0;
+  border-radius:24px;
+  padding:20px;
+}
+.form-actions{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-top:16px;
+}
+.inline-stat{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 0;
+  border-bottom:1px solid #e8eef7;
+}
+.inline-stat:last-child{
+  border-bottom:none;
+}
+.top-alert{
+  margin-top:16px;
+  padding:14px 16px;
+  border-radius:16px;
+  background:#f8fbff;
+  border:1px solid #dbe4f0;
+  color:#435b7d;
+}
+.actions-inline{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.small-btn{
+  border:1px solid #dbe4f0;
+  background:#fff;
+  color:#0b2149;
+  border-radius:12px;
+  min-height:34px;
+  padding:0 12px;
+  cursor:pointer;
+  font-weight:700;
+}
+.small-btn.danger{
+  color:#b42318;
+  border-color:#f5c2c7;
+  background:#fff5f5;
+}
+.panel{
+  background:#fff;
+  border:1px solid #dbe4f0;
+  border-radius:24px;
+  padding:24px;
+}
+.section-space{
+  margin-top:18px;
+}
+@media (max-width: 1100px){
+  .detail-grid,
+  .split-card{
+    grid-template-columns:1fr;
+  }
+}
+@media (max-width: 860px){
+  .inline-form,
+  .field-grid{
+    grid-template-columns:1fr;
+  }
+  .detail-hero{
+    flex-direction:column;
+  }
+}
+
+
+.filter-bar{
+  display:grid;
+  grid-template-columns:1.1fr repeat(4, minmax(0, 1fr)) auto;
+  gap:12px;
+  margin:18px 0;
+  align-items:end;
+}
+.align-end{
+  align-self:end;
+}
+.compact-kpi-grid .kpi-card{
+  min-height:0;
+}
+.simple-table .table-actions{
+  white-space:nowrap;
+}
+textarea{
+  min-height:90px;
+  border:1px solid #dbe4f0;
+  border-radius:14px;
+  padding:12px 14px;
+  font-size:15px;
+  background:#fff;
+  resize:vertical;
+}
+@media (max-width: 1200px){
+  .filter-bar{
+    grid-template-columns:repeat(3, minmax(0,1fr));
+  }
+}
+@media (max-width: 860px){
+  .filter-bar{
+    grid-template-columns:1fr;
+  }
+}
+
+
+/* Fase 7 v6 - otimização de cards para caber melhor em uma tela */
+.detail-grid{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:16px;
+  margin-top:16px;
+}
+.content-grid{
+  display:grid;
+  grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);
+  gap:16px;
+}
+.table-card,
+.list-card,
+.form-card,
+.panel{
+  min-width:0;
+  overflow:hidden;
+}
+.inline-form{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 140px minmax(0,1.2fr) auto;
+  gap:10px;
+  align-items:center;
+  margin-bottom:14px;
+}
+.inline-form input,
+.inline-form select{
+  min-width:0;
+  width:100%;
+}
+.inline-form .btn,
+.inline-form button{
+  white-space:nowrap;
+  min-width:96px;
+}
+.detail-hero{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:14px;
+  align-items:start;
+}
+.detail-hero h2{
+  font-size:28px;
+  line-height:1.05;
+  word-break:break-word;
+}
+.kpi-grid{
+  gap:14px;
+}
+.kpi-card{
+  min-width:0;
+}
+.kpi-value{
+  word-break:break-word;
+}
+.simple-table{
+  table-layout:fixed;
+  width:100%;
+}
+.simple-table td,
+.simple-table th{
+  overflow-wrap:anywhere;
+}
+.topbar{
+  gap:12px;
+}
+.topbar-title{
+  line-height:1.05;
+}
+@media (max-width: 1400px){
+  .content-grid{
+    grid-template-columns:minmax(0,1.35fr) minmax(320px,.9fr);
+  }
+  .detail-hero h2{
+    font-size:25px;
+  }
+}
+@media (max-width: 1200px){
+  .detail-grid,
+  .content-grid{
+    grid-template-columns:1fr;
+  }
+  .inline-form{
+    grid-template-columns:1fr;
+  }
+  .detail-hero{
+    grid-template-columns:1fr;
+  }
+}
+
+
+/* Fase 7 v7 - manter detalhe compacto sem estourar a lista de obras */
+.simple-table{
+  table-layout:auto !important;
+  width:100%;
+}
+.simple-table td,
+.simple-table th{
+  overflow-wrap:normal !important;
+  word-break:normal !important;
+  white-space:normal;
+}
+.simple-table td strong{
+  word-break:normal;
+}
+.simple-table .muted{
+  overflow-wrap:normal;
+  word-break:normal;
+}
+.table-actions .actions-inline{
+  display:flex;
+  gap:8px;
+  flex-wrap:nowrap;
+  align-items:center;
+}
+.table-actions .small-btn{
+  min-width:0;
+  white-space:nowrap;
+}
+@media (max-width: 1200px){
+  .table-actions .actions-inline{
+    flex-wrap:wrap;
+  }
+}

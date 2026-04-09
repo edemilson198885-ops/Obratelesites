@@ -8,6 +8,8 @@ OBRAS.app = {
     OBRAS.router.register(OBRAS.config.SCREENS.FINANCEIRO, function(){ OBRAS.financeiroScreen.render(); });
     OBRAS.router.register(OBRAS.config.SCREENS.CADASTROS, function(){ OBRAS.cadastrosScreen.render(); });
     OBRAS.router.register(OBRAS.config.SCREENS.CONFIGURACOES, function(){ OBRAS.configuracoesScreen.render(); });
+    OBRAS.router.register(OBRAS.config.SCREENS.OBRA_DETALHE, function(){ OBRAS.obraDetalheScreen.render(); });
+    OBRAS.router.register(OBRAS.config.SCREENS.RELATORIOS, function(){ OBRAS.relatoriosScreen.render(); });
   },
   render: function(){
     document.title = OBRAS.config.APP_NAME;
@@ -18,9 +20,11 @@ OBRAS.app = {
   },
   boot: function(){
     OBRAS.stateApi.initialize(false);
+    OBRAS.services.enableAutoSaveSync();
     OBRAS.events.bindGlobal();
     this.registerScreens();
     this.render();
+    OBRAS.services.bootstrapAutoSync();
   }
 };
 window.addEventListener('DOMContentLoaded', function(){ OBRAS.app.boot(); });

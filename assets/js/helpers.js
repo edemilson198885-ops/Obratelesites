@@ -4,6 +4,9 @@ OBRAS.helpers = {
   money: function(value){
     return Number(value || 0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
   },
+  toNumber: function(value){
+    return Number(String(value == null ? '' : value).replace(/\./g,'').replace(',', '.').replace(/[^0-9.-]/g,'')) || 0;
+  },
   uid: function(prefix){
     return (prefix || 'id') + '_' + Math.random().toString(36).slice(2, 10);
   },

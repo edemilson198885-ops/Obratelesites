@@ -22,7 +22,9 @@ OBRAS.models = {
       pagamentosParceiros: [],
       despesas: [],
       despesasGerais: [],
-      movimentosCaixa: []
+      movimentosCaixa: [],
+      despesasFixas: [],
+      recurringIgnore: []
     };
   },
   createSeedDB: function(){
