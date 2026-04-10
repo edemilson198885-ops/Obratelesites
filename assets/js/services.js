@@ -629,7 +629,8 @@ OBRAS.services = {
         nome: item.nome || '',
         observacoes: item.observacoes || item.contato || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -640,7 +641,8 @@ OBRAS.services = {
         nome: item.nome || '',
         observacoes: item.observacoes || item.contato || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -651,7 +653,8 @@ OBRAS.services = {
         nome: item.nome || '',
         observacoes: item.observacoes || item.contato || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -683,7 +686,8 @@ OBRAS.services = {
         observacoes: item.observacoes || '',
         status_ciclo_os: item.statusCicloOS || 'Ativa',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -697,7 +701,8 @@ OBRAS.services = {
         valor_fechado_parceiro: Number(item.valorFechadoParceiro || 0),
         observacoes: item.observacoes || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -710,7 +715,8 @@ OBRAS.services = {
         valor: Number(item.valor || 0),
         observacoes: item.observacoes || item.observacao || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -726,7 +732,8 @@ OBRAS.services = {
         descricao: item.descricao || '',
         observacoes: item.observacoes || item.observacao || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -745,7 +752,8 @@ OBRAS.services = {
         observacoes: item.observacoes || item.observacao || '',
         gerada_automaticamente: !!item.geradaAutomaticamente,
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -764,7 +772,8 @@ OBRAS.services = {
         regra_fixa_id: item.regraFixaId || item.recorrenciaId || null,
         ignorada: !!item.ignorada,
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -777,7 +786,8 @@ OBRAS.services = {
         valor: Number(item.valor || 0),
         observacoes: item.observacoes || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -791,7 +801,8 @@ OBRAS.services = {
         competencia_inicio: item.competenciaInicio || OBRAS.helpers.todayISO().slice(0,7),
         ativa: item.ativa !== false,
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -819,16 +830,118 @@ OBRAS.services = {
     };
   },
 
+
+  buildSyncPayload: function(){
+    return {
+      empresas: OBRAS.state.empresas || [],
+      clientes: OBRAS.state.clientes || [],
+      parceiros: OBRAS.state.parceiros || [],
+      obras: OBRAS.state.obras || [],
+      recebimentos: OBRAS.state.recebimentos || [],
+      repasses: OBRAS.state.repasses || [],
+      pagamentosParceiros: OBRAS.state.pagamentosParceiros || [],
+      despesas: OBRAS.state.despesas || [],
+      despesasGerais: OBRAS.state.despesasGerais || [],
+      movimentosCaixa: OBRAS.state.movimentosCaixa || [],
+      despesasFixas: OBRAS.state.despesasFixas || [],
+      recurringIgnore: OBRAS.state.recurringIgnore || []
+    };
+  },
+
+  computePayloadHash: function(payload){
+    try {
+      var json = JSON.stringify(payload || {});
+      var hash = 0, i, chr;
+      if (!json.length) return 'h0';
+      for (i = 0; i < json.length; i += 1) {
+        chr = json.charCodeAt(i);
+        hash = ((hash << 5) - hash) + chr;
+        hash |= 0;
+      }
+      return 'h' + Math.abs(hash);
+    } catch (err) {
+      console.error(err);
+      return 'h0';
+    }
+  },
+
+  ensureCloudControl: function(){
+    OBRAS.state.cloudControl = OBRAS.state.cloudControl || {};
+    if (!OBRAS.state.cloudControl.baseId) {
+      var email = (OBRAS.state.session && OBRAS.state.session.userEmail) || 'local';
+      var safe = String(email).toLowerCase().replace(/[^a-z0-9]+/g, '_');
+      OBRAS.state.cloudControl.baseId = 'base_' + safe;
+    }
+    if (!OBRAS.state.cloudControl.userId) {
+      OBRAS.state.cloudControl.userId = (OBRAS.state.session && OBRAS.state.session.userId) || '';
+    }
+    var payload = this.buildSyncPayload();
+    OBRAS.state.cloudControl.lastHash = this.computePayloadHash(payload);
+    OBRAS.state.cloudControl.lastSyncAt = OBRAS.state.cloudControl.lastSyncAt || '';
+    return OBRAS.state.cloudControl;
+  },
+
+  updateCloudControlAfterSave: function(){
+    this.ensureCloudControl();
+    OBRAS.state.cloudControl.lastHash = this.computePayloadHash(this.buildSyncPayload());
+    OBRAS.state.cloudControl.lastSyncAt = new Date().toISOString();
+    return OBRAS.state.cloudControl;
+  },
+
+  validateRemoteSnapshot: function(snapshot){
+    var localCtl = this.ensureCloudControl();
+    var remoteCtl = snapshot && snapshot._cloudControl ? snapshot._cloudControl : {};
+    if (remoteCtl.userId && localCtl.userId && remoteCtl.userId !== localCtl.userId) {
+      return { ok:false, reason:'Usuário da nuvem diferente do usuário local.' };
+    }
+    if (remoteCtl.baseId && localCtl.baseId && remoteCtl.baseId !== localCtl.baseId) {
+      return { ok:false, reason:'Base da nuvem diferente da base local.' };
+    }
+    var localObras = (OBRAS.state.obras || []).length;
+    var remoteObras = (snapshot.obras || []).length;
+    if (localObras > 0 && remoteObras > 0 && remoteObras < localObras) {
+      return { ok:false, reason:'Nuvem com menos obras que a base local. Download bloqueado.' };
+    }
+    return { ok:true, remote:remoteCtl, local:localCtl };
+  },
+
   fetchRemoteSnapshot: async function(){
     var client = this.getSupabaseClient();
     var tables = ['empresas','clientes','parceiros','obras','repasses','recebimentos','pagamentos_parceiros','despesas','despesas_gerais','movimentos_caixa','despesas_fixas','ignorados_recorrencia'];
     var out = {};
+    var userId = OBRAS.state && OBRAS.state.session ? (OBRAS.state.session.userId || '') : '';
     for (var i = 0; i < tables.length; i += 1) {
       var t = tables[i];
-      var result = await client.from(t).select('*');
-      if (result.error) throw result.error;
+      var query = client.from(t).select('*');
+      if (userId) query = query.eq('user_id', userId);
+      var result = await query;
+      if (result.error) {
+        // fallback for schemas that do not yet have user_id
+        var fallback = await client.from(t).select('*');
+        if (fallback.error) throw fallback.error;
+        result = fallback;
+      }
       out[t] = result.data || [];
     }
+    out._cloudControl = {
+      baseId: OBRAS.state.cloudControl && OBRAS.state.cloudControl.baseId ? OBRAS.state.cloudControl.baseId : '',
+      userId: userId,
+      lastHash: this.computePayloadHash({
+        empresas: out.empresas || [],
+        clientes: out.clientes || [],
+        parceiros: out.parceiros || [],
+        obras: out.obras || [],
+        recebimentos: out.recebimentos || [],
+        repasses: out.repasses || [],
+        pagamentosParceiros: (out.pagamentos_parceiros || []),
+        despesas: out.despesas || [],
+        despesasGerais: (out.despesas_gerais || []),
+        movimentosCaixa: (out.movimentos_caixa || []),
+        despesasFixas: (out.despesas_fixas || []),
+        recurringIgnore: (out.ignorados_recorrencia || [])
+      }),
+      lastSyncAt: new Date().toISOString()
+    };
     return out;
   },
 
@@ -842,7 +955,13 @@ OBRAS.services = {
     try {
       var snapshot = await this.fetchRemoteSnapshot();
       if (this.hasRemoteData(snapshot)) {
+        var check = this.validateRemoteSnapshot(snapshot);
+        if (!check.ok) {
+          OBRAS.ui.toast(check.reason);
+          return false;
+        }
         OBRAS.state = this.applyRemoteSnapshot(snapshot);
+        this.updateCloudControlAfterSave();
         OBRAS.state.currentScreen = OBRAS.config.SCREENS.DASHBOARD;
         OBRAS.stateApi.save();
         OBRAS.app.render();
@@ -859,11 +978,13 @@ OBRAS.services = {
 
   forceCloudUpload: async function(){
     try {
+      this.updateCloudControlAfterSave();
       await this.uploadAllToSupabase(true);
       OBRAS.state.cloud = OBRAS.state.cloud || {};
       OBRAS.state.cloud.online = true;
       OBRAS.state.cloud.lastSyncAt = new Date().toISOString();
       OBRAS.state.cloud.lastSyncStatus = 'Envio manual concluído';
+      OBRAS.state.cloudControl.lastSyncAt = OBRAS.state.cloud.lastSyncAt;
       OBRAS.stateApi.save();
       OBRAS.ui.toast('Backup enviado para a nuvem.');
       return true;
@@ -881,7 +1002,17 @@ OBRAS.services = {
         OBRAS.ui.toast('A nuvem está vazia.');
         return false;
       }
+      var check = this.validateRemoteSnapshot(snapshot);
+      if (!check.ok) {
+        OBRAS.ui.toast(check.reason);
+        return false;
+      }
+      if (OBRAS.state.cloudControl && OBRAS.state.cloudControl.lastHash && check.remote && check.remote.lastHash && OBRAS.state.cloudControl.lastHash !== check.remote.lastHash) {
+        var ok = window.confirm('A nuvem está diferente da base local. Deseja substituir os dados locais pela nuvem?');
+        if (!ok) return false;
+      }
       OBRAS.state = this.applyRemoteSnapshot(snapshot);
+      this.updateCloudControlAfterSave();
       OBRAS.state.currentScreen = OBRAS.config.SCREENS.DASHBOARD;
       OBRAS.stateApi.save();
       OBRAS.app.render();
@@ -1461,7 +1592,8 @@ OBRAS.services = {
         nome: item.nome || '',
         observacoes: item.observacoes || item.contato || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -1472,7 +1604,8 @@ OBRAS.services = {
         nome: item.nome || '',
         observacoes: item.observacoes || item.contato || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -1483,7 +1616,8 @@ OBRAS.services = {
         nome: item.nome || '',
         observacoes: item.observacoes || item.contato || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -1515,7 +1649,8 @@ OBRAS.services = {
         observacoes: item.observacoes || '',
         status_ciclo_os: item.statusCicloOS || 'Ativa',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -1529,7 +1664,8 @@ OBRAS.services = {
         valor_fechado_parceiro: Number(item.valorFechadoParceiro || 0),
         observacoes: item.observacoes || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -1542,7 +1678,8 @@ OBRAS.services = {
         valor: Number(item.valor || 0),
         observacoes: item.observacoes || item.observacao || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -1558,7 +1695,8 @@ OBRAS.services = {
         descricao: item.descricao || '',
         observacoes: item.observacoes || item.observacao || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -1577,7 +1715,8 @@ OBRAS.services = {
         observacoes: item.observacoes || item.observacao || '',
         gerada_automaticamente: !!item.geradaAutomaticamente,
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -1596,7 +1735,8 @@ OBRAS.services = {
         regra_fixa_id: item.regraFixaId || item.recorrenciaId || null,
         ignorada: !!item.ignorada,
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -1609,7 +1749,8 @@ OBRAS.services = {
         valor: Number(item.valor || 0),
         observacoes: item.observacoes || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -1623,7 +1764,8 @@ OBRAS.services = {
         competencia_inicio: item.competenciaInicio || OBRAS.helpers.todayISO().slice(0,7),
         ativa: item.ativa !== false,
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -1651,16 +1793,118 @@ OBRAS.services = {
     };
   },
 
+
+  buildSyncPayload: function(){
+    return {
+      empresas: OBRAS.state.empresas || [],
+      clientes: OBRAS.state.clientes || [],
+      parceiros: OBRAS.state.parceiros || [],
+      obras: OBRAS.state.obras || [],
+      recebimentos: OBRAS.state.recebimentos || [],
+      repasses: OBRAS.state.repasses || [],
+      pagamentosParceiros: OBRAS.state.pagamentosParceiros || [],
+      despesas: OBRAS.state.despesas || [],
+      despesasGerais: OBRAS.state.despesasGerais || [],
+      movimentosCaixa: OBRAS.state.movimentosCaixa || [],
+      despesasFixas: OBRAS.state.despesasFixas || [],
+      recurringIgnore: OBRAS.state.recurringIgnore || []
+    };
+  },
+
+  computePayloadHash: function(payload){
+    try {
+      var json = JSON.stringify(payload || {});
+      var hash = 0, i, chr;
+      if (!json.length) return 'h0';
+      for (i = 0; i < json.length; i += 1) {
+        chr = json.charCodeAt(i);
+        hash = ((hash << 5) - hash) + chr;
+        hash |= 0;
+      }
+      return 'h' + Math.abs(hash);
+    } catch (err) {
+      console.error(err);
+      return 'h0';
+    }
+  },
+
+  ensureCloudControl: function(){
+    OBRAS.state.cloudControl = OBRAS.state.cloudControl || {};
+    if (!OBRAS.state.cloudControl.baseId) {
+      var email = (OBRAS.state.session && OBRAS.state.session.userEmail) || 'local';
+      var safe = String(email).toLowerCase().replace(/[^a-z0-9]+/g, '_');
+      OBRAS.state.cloudControl.baseId = 'base_' + safe;
+    }
+    if (!OBRAS.state.cloudControl.userId) {
+      OBRAS.state.cloudControl.userId = (OBRAS.state.session && OBRAS.state.session.userId) || '';
+    }
+    var payload = this.buildSyncPayload();
+    OBRAS.state.cloudControl.lastHash = this.computePayloadHash(payload);
+    OBRAS.state.cloudControl.lastSyncAt = OBRAS.state.cloudControl.lastSyncAt || '';
+    return OBRAS.state.cloudControl;
+  },
+
+  updateCloudControlAfterSave: function(){
+    this.ensureCloudControl();
+    OBRAS.state.cloudControl.lastHash = this.computePayloadHash(this.buildSyncPayload());
+    OBRAS.state.cloudControl.lastSyncAt = new Date().toISOString();
+    return OBRAS.state.cloudControl;
+  },
+
+  validateRemoteSnapshot: function(snapshot){
+    var localCtl = this.ensureCloudControl();
+    var remoteCtl = snapshot && snapshot._cloudControl ? snapshot._cloudControl : {};
+    if (remoteCtl.userId && localCtl.userId && remoteCtl.userId !== localCtl.userId) {
+      return { ok:false, reason:'Usuário da nuvem diferente do usuário local.' };
+    }
+    if (remoteCtl.baseId && localCtl.baseId && remoteCtl.baseId !== localCtl.baseId) {
+      return { ok:false, reason:'Base da nuvem diferente da base local.' };
+    }
+    var localObras = (OBRAS.state.obras || []).length;
+    var remoteObras = (snapshot.obras || []).length;
+    if (localObras > 0 && remoteObras > 0 && remoteObras < localObras) {
+      return { ok:false, reason:'Nuvem com menos obras que a base local. Download bloqueado.' };
+    }
+    return { ok:true, remote:remoteCtl, local:localCtl };
+  },
+
   fetchRemoteSnapshot: async function(){
     var client = this.getSupabaseClient();
     var tables = ['empresas','clientes','parceiros','obras','repasses','recebimentos','pagamentos_parceiros','despesas','despesas_gerais','movimentos_caixa','despesas_fixas','ignorados_recorrencia'];
     var out = {};
+    var userId = OBRAS.state && OBRAS.state.session ? (OBRAS.state.session.userId || '') : '';
     for (var i = 0; i < tables.length; i += 1) {
       var t = tables[i];
-      var result = await client.from(t).select('*');
-      if (result.error) throw result.error;
+      var query = client.from(t).select('*');
+      if (userId) query = query.eq('user_id', userId);
+      var result = await query;
+      if (result.error) {
+        // fallback for schemas that do not yet have user_id
+        var fallback = await client.from(t).select('*');
+        if (fallback.error) throw fallback.error;
+        result = fallback;
+      }
       out[t] = result.data || [];
     }
+    out._cloudControl = {
+      baseId: OBRAS.state.cloudControl && OBRAS.state.cloudControl.baseId ? OBRAS.state.cloudControl.baseId : '',
+      userId: userId,
+      lastHash: this.computePayloadHash({
+        empresas: out.empresas || [],
+        clientes: out.clientes || [],
+        parceiros: out.parceiros || [],
+        obras: out.obras || [],
+        recebimentos: out.recebimentos || [],
+        repasses: out.repasses || [],
+        pagamentosParceiros: (out.pagamentos_parceiros || []),
+        despesas: out.despesas || [],
+        despesasGerais: (out.despesas_gerais || []),
+        movimentosCaixa: (out.movimentos_caixa || []),
+        despesasFixas: (out.despesas_fixas || []),
+        recurringIgnore: (out.ignorados_recorrencia || [])
+      }),
+      lastSyncAt: new Date().toISOString()
+    };
     return out;
   },
 
@@ -1862,7 +2106,8 @@ OBRAS.services = {
         nome: item.nome || '',
         observacoes: item.observacoes || item.contato || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -1873,7 +2118,8 @@ OBRAS.services = {
         nome: item.nome || '',
         observacoes: item.observacoes || item.contato || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -1884,7 +2130,8 @@ OBRAS.services = {
         nome: item.nome || '',
         observacoes: item.observacoes || item.contato || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -1916,7 +2163,8 @@ OBRAS.services = {
         observacoes: item.observacoes || '',
         status_ciclo_os: item.statusCicloOS || 'Ativa',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -1930,7 +2178,8 @@ OBRAS.services = {
         valor_fechado_parceiro: Number(item.valorFechadoParceiro || 0),
         observacoes: item.observacoes || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -1943,7 +2192,8 @@ OBRAS.services = {
         valor: Number(item.valor || 0),
         observacoes: item.observacoes || item.observacao || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -1959,7 +2209,8 @@ OBRAS.services = {
         descricao: item.descricao || '',
         observacoes: item.observacoes || item.observacao || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -1978,7 +2229,8 @@ OBRAS.services = {
         observacoes: item.observacoes || item.observacao || '',
         gerada_automaticamente: !!item.geradaAutomaticamente,
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -1997,7 +2249,8 @@ OBRAS.services = {
         regra_fixa_id: item.regraFixaId || item.recorrenciaId || null,
         ignorada: !!item.ignorada,
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -2010,7 +2263,8 @@ OBRAS.services = {
         valor: Number(item.valor || 0),
         observacoes: item.observacoes || '',
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -2024,7 +2278,8 @@ OBRAS.services = {
         competencia_inicio: item.competenciaInicio || OBRAS.helpers.todayISO().slice(0,7),
         ativa: item.ativa !== false,
         created_at: item.createdAt || item.created_at || now,
-        updated_at: item.updatedAt || item.updated_at || now
+        updated_at: item.updatedAt || item.updated_at || now,
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -2052,16 +2307,118 @@ OBRAS.services = {
     };
   },
 
+
+  buildSyncPayload: function(){
+    return {
+      empresas: OBRAS.state.empresas || [],
+      clientes: OBRAS.state.clientes || [],
+      parceiros: OBRAS.state.parceiros || [],
+      obras: OBRAS.state.obras || [],
+      recebimentos: OBRAS.state.recebimentos || [],
+      repasses: OBRAS.state.repasses || [],
+      pagamentosParceiros: OBRAS.state.pagamentosParceiros || [],
+      despesas: OBRAS.state.despesas || [],
+      despesasGerais: OBRAS.state.despesasGerais || [],
+      movimentosCaixa: OBRAS.state.movimentosCaixa || [],
+      despesasFixas: OBRAS.state.despesasFixas || [],
+      recurringIgnore: OBRAS.state.recurringIgnore || []
+    };
+  },
+
+  computePayloadHash: function(payload){
+    try {
+      var json = JSON.stringify(payload || {});
+      var hash = 0, i, chr;
+      if (!json.length) return 'h0';
+      for (i = 0; i < json.length; i += 1) {
+        chr = json.charCodeAt(i);
+        hash = ((hash << 5) - hash) + chr;
+        hash |= 0;
+      }
+      return 'h' + Math.abs(hash);
+    } catch (err) {
+      console.error(err);
+      return 'h0';
+    }
+  },
+
+  ensureCloudControl: function(){
+    OBRAS.state.cloudControl = OBRAS.state.cloudControl || {};
+    if (!OBRAS.state.cloudControl.baseId) {
+      var email = (OBRAS.state.session && OBRAS.state.session.userEmail) || 'local';
+      var safe = String(email).toLowerCase().replace(/[^a-z0-9]+/g, '_');
+      OBRAS.state.cloudControl.baseId = 'base_' + safe;
+    }
+    if (!OBRAS.state.cloudControl.userId) {
+      OBRAS.state.cloudControl.userId = (OBRAS.state.session && OBRAS.state.session.userId) || '';
+    }
+    var payload = this.buildSyncPayload();
+    OBRAS.state.cloudControl.lastHash = this.computePayloadHash(payload);
+    OBRAS.state.cloudControl.lastSyncAt = OBRAS.state.cloudControl.lastSyncAt || '';
+    return OBRAS.state.cloudControl;
+  },
+
+  updateCloudControlAfterSave: function(){
+    this.ensureCloudControl();
+    OBRAS.state.cloudControl.lastHash = this.computePayloadHash(this.buildSyncPayload());
+    OBRAS.state.cloudControl.lastSyncAt = new Date().toISOString();
+    return OBRAS.state.cloudControl;
+  },
+
+  validateRemoteSnapshot: function(snapshot){
+    var localCtl = this.ensureCloudControl();
+    var remoteCtl = snapshot && snapshot._cloudControl ? snapshot._cloudControl : {};
+    if (remoteCtl.userId && localCtl.userId && remoteCtl.userId !== localCtl.userId) {
+      return { ok:false, reason:'Usuário da nuvem diferente do usuário local.' };
+    }
+    if (remoteCtl.baseId && localCtl.baseId && remoteCtl.baseId !== localCtl.baseId) {
+      return { ok:false, reason:'Base da nuvem diferente da base local.' };
+    }
+    var localObras = (OBRAS.state.obras || []).length;
+    var remoteObras = (snapshot.obras || []).length;
+    if (localObras > 0 && remoteObras > 0 && remoteObras < localObras) {
+      return { ok:false, reason:'Nuvem com menos obras que a base local. Download bloqueado.' };
+    }
+    return { ok:true, remote:remoteCtl, local:localCtl };
+  },
+
   fetchRemoteSnapshot: async function(){
     var client = this.getSupabaseClient();
     var tables = ['empresas','clientes','parceiros','obras','repasses','recebimentos','pagamentos_parceiros','despesas','despesas_gerais','movimentos_caixa','despesas_fixas','ignorados_recorrencia'];
     var out = {};
+    var userId = OBRAS.state && OBRAS.state.session ? (OBRAS.state.session.userId || '') : '';
     for (var i = 0; i < tables.length; i += 1) {
       var t = tables[i];
-      var result = await client.from(t).select('*');
-      if (result.error) throw result.error;
+      var query = client.from(t).select('*');
+      if (userId) query = query.eq('user_id', userId);
+      var result = await query;
+      if (result.error) {
+        // fallback for schemas that do not yet have user_id
+        var fallback = await client.from(t).select('*');
+        if (fallback.error) throw fallback.error;
+        result = fallback;
+      }
       out[t] = result.data || [];
     }
+    out._cloudControl = {
+      baseId: OBRAS.state.cloudControl && OBRAS.state.cloudControl.baseId ? OBRAS.state.cloudControl.baseId : '',
+      userId: userId,
+      lastHash: this.computePayloadHash({
+        empresas: out.empresas || [],
+        clientes: out.clientes || [],
+        parceiros: out.parceiros || [],
+        obras: out.obras || [],
+        recebimentos: out.recebimentos || [],
+        repasses: out.repasses || [],
+        pagamentosParceiros: (out.pagamentos_parceiros || []),
+        despesas: out.despesas || [],
+        despesasGerais: (out.despesas_gerais || []),
+        movimentosCaixa: (out.movimentos_caixa || []),
+        despesasFixas: (out.despesas_fixas || []),
+        recurringIgnore: (out.ignorados_recorrencia || [])
+      }),
+      lastSyncAt: new Date().toISOString()
+    };
     return out;
   },
 

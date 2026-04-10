@@ -26,6 +26,7 @@ OBRAS.stateApi = {
     db.ui.obrasFilters = db.ui.obrasFilters || { query:'', status:'todos', cidade:'', parceiro:'', cliente:'' };
     db.ui.financeFilters = db.ui.financeFilters || { query:'', tipo:'todos', status:'todos', obra:'' };
     db.cloud = db.cloud || { enabled:true, mode:'automatico', projectUrl: OBRAS.config.SUPABASE_URL, lastSyncAt:'', lastSyncStatus:'Não sincronizado', auto:true, online:false };
+    db.cloudControl = db.cloudControl || { baseId:'', userId:(db.session && db.session.userId) || '', lastHash:'', lastSyncAt:'' };
     return db;
   },
   buildBaseState: function(forceSeed){
@@ -66,7 +67,6 @@ OBRAS.stateApi = {
   },
   initialize: function(forceSeed){
     OBRAS.state = this.normalizeDB(this.buildBaseState(forceSeed));
-    if (OBRAS.services && OBRAS.services.syncAutoNfExpenses) OBRAS.services.syncAutoNfExpenses();
     OBRAS.state.currentScreen = OBRAS.state.session && OBRAS.state.session.loggedIn ? OBRAS.config.SCREENS.DASHBOARD : OBRAS.config.SCREENS.LOGIN;
     OBRAS.state.form = OBRAS.state.form || {};
   },
