@@ -3,55 +3,89 @@ OBRAS.financeiroScreen = {
   buildMovimentos: function(){
     var entradas = (OBRAS.state.recebimentos || []).map(function(r){
       return {
+        entryId: r.id,
+        sourceKey: 'recebimentos',
         tipo: 'Recebimento',
         os: r.os || ((OBRAS.state.obras || []).find(function(o){ return o.id === r.obraId; }) || {}).numeroOS || 'GERAL',
         descricao: r.descricao || r.observacao || 'Recebimento',
         data: r.dataRecebimento || r.data || '',
         valor: Number(r.valor || 0),
         status: 'Recebido',
-        natureza: 'entrada'
+        natureza: 'entrada',
+        canPay: false,
+        canDelete: true
       };
     });
 
     var pagParceiros = (OBRAS.state.pagamentosParceiros || []).map(function(p){
+      var pago = !!(p.dataPagamentoReal || p.status === 'pago');
       return {
+        entryId: p.id,
+        sourceKey: 'pagamentosParceiros',
         tipo: 'Pagamento parceiro',
         os: p.os || ((OBRAS.state.obras || []).find(function(o){ return o.id === p.obraId; }) || {}).numeroOS || 'GERAL',
         descricao: p.descricao || p.observacao || 'Pagamento parceiro',
         data: p.dataVencimento || p.data || '',
         valor: Number(p.valor || 0),
-        status: p.dataPagamentoReal || p.status === 'pago' ? 'Pago' : OBRAS.helpers.statusVencimento(p.dataVencimento || p.data, ''),
-        natureza: 'saida'
+        status: pago ? 'Pago' : OBRAS.helpers.statusVencimento(p.dataVencimento || p.data, ''),
+        natureza: 'saida',
+        canPay: !pago,
+        canDelete: true
       };
     });
 
     var despesasObra = (OBRAS.state.despesas || []).map(function(d){
+      var pago = !!(d.dataPagamentoReal || d.status === 'pago');
+      var autoNf = d.origemLancamento === 'automatico_obra_nf' || d.geradaAutomaticamente === true;
       return {
+        entryId: d.id,
+        sourceKey: 'despesas',
         tipo: 'Despesa obra',
         os: d.os || ((OBRAS.state.obras || []).find(function(o){ return o.id === d.obraId; }) || {}).numeroOS || 'GERAL',
         descricao: d.tipoDespesa || d.observacoes || d.observacao || 'Despesa obra',
-        data: d.dataVencimento || d.data || '',
+        data: d.dataVencimento || d.dataDespesa || d.data || '',
         valor: Number(d.valor || 0),
-        status: d.dataPagamentoReal || d.status === 'pago' ? 'Pago' : OBRAS.helpers.statusVencimento(d.dataVencimento || d.data, ''),
-        natureza: 'saida'
+        status: pago ? 'Pago' : OBRAS.helpers.statusVencimento(d.dataVencimento || d.dataDespesa || d.data, ''),
+        natureza: 'saida',
+        canPay: !pago,
+        canDelete: !autoNf,
+        autoNf: autoNf
       };
     });
 
     var despesasGerais = (OBRAS.state.despesasGerais || []).map(function(d){
+      var pago = !!(d.dataPagamentoReal || d.status === 'pago');
       return {
+        entryId: d.id,
+        sourceKey: 'despesasGerais',
         tipo: 'Despesa geral',
         os: 'GERAL',
-        descricao: d.tipoDespesa || d.observacoes || 'Despesa geral',
-        data: d.dataVencimento || '',
+        descricao: d.tipoDespesa || d.descricao || d.observacoes || 'Despesa geral',
+        data: d.dataVencimento || d.data || '',
         valor: Number(d.valor || 0),
-        status: d.dataPagamentoReal || d.status === 'pago' ? 'Pago' : OBRAS.helpers.statusVencimento(d.dataVencimento, ''),
-        natureza: 'saida'
+        status: pago ? 'Pago' : OBRAS.helpers.statusVencimento(d.dataVencimento || d.data, ''),
+        natureza: 'saida',
+        canPay: !pago,
+        canDelete: true
       };
     });
 
     return entradas.concat(pagParceiros, despesasObra, despesasGerais).sort(function(a,b){
       return String(b.data || '').localeCompare(String(a.data || ''));
     });
+  },
+
+  actionButtons: function(item){
+    var html = '<div class="table-actions actions-inline">'
+      + '<button class="small-btn btn-soft" data-action="edit-finance-entry" data-kind="' + item.sourceKey + '" data-id="' + item.entryId + '">Editar</button>';
+    if (item.canPay) {
+      html += '<button class="small-btn btn-primary-lite" data-action="pay-finance-entry" data-kind="' + item.sourceKey + '" data-id="' + item.entryId + '">Pagar</button>';
+    }
+    if (item.canDelete) {
+      html += '<button class="small-btn btn-danger" data-action="delete-finance-entry" data-kind="' + item.sourceKey + '" data-id="' + item.entryId + '">Excluir</button>';
+    }
+    html += '</div>';
+    return html;
   },
 
   render: function(){
@@ -82,7 +116,7 @@ OBRAS.financeiroScreen = {
         return '<div class="list-item"><div><strong>' + OBRAS.helpers.escape(i.os) + '</strong><div class="muted">' + OBRAS.helpers.escape(i.descricao) + ' · ' + OBRAS.helpers.escape(i.status) + '</div></div><div><strong>' + OBRAS.helpers.money(i.valor) + '</strong></div></div>';
       }).join('');
 
-      var movRows = filtrados.slice(0, 12).map(function(i){
+      var movRows = filtrados.slice(0, 18).map(function(i){
         return '<tr>'
           + '<td>' + OBRAS.helpers.escape(i.data ? OBRAS.helpers.formatDate(i.data) : '-') + '</td>'
           + '<td>' + OBRAS.helpers.escape(i.os) + '</td>'
@@ -90,6 +124,7 @@ OBRAS.financeiroScreen = {
           + '<td>' + OBRAS.helpers.escape(i.descricao) + '</td>'
           + '<td>' + OBRAS.ui.badge(i.status, i.status === 'Pago' || i.status === 'Recebido' ? 'success' : (i.status === 'Atrasado' ? 'danger' : 'warning')) + '</td>'
           + '<td>' + OBRAS.helpers.money(i.valor) + '</td>'
+          + '<td>' + OBRAS.financeiroScreen.actionButtons(i) + '</td>'
           + '</tr>';
       }).join('');
 
@@ -106,7 +141,7 @@ OBRAS.financeiroScreen = {
 
       OBRAS.ui.setHTML('screen-container',
         '<div class="screen-head">'
-        + '  <div><h1 class="screen-title">Financeiro</h1><div class="screen-subtitle">Fases 5 e 6 juntas: filtros, fluxo de caixa, contas a pagar e leitura consolidada por obra.</div></div>'
+        + '  <div><h1 class="screen-title">Financeiro</h1><div class="screen-subtitle">V9.3 com pagar, editar e excluir diretamente no fluxo financeiro, inclusive NF e despesas gerais.</div></div>'
         + '  <div class="actions-row"><button class="btn" data-go="dashboard">Voltar ao painel</button></div>'
         + '</div>'
         + '<div class="kpi-grid compact-kpi-grid">'
@@ -150,12 +185,18 @@ OBRAS.financeiroScreen = {
         + '  <div class="list-card"><h3 class="card-title">Contas a receber</h3>' + (contasReceber || '<div class="empty-state">Nenhuma obra com saldo a receber.</div>') + '</div>'
         + '  <div class="list-card"><h3 class="card-title">Contas a pagar</h3>' + (contasPagar || '<div class="empty-state">Nenhum compromisso em aberto com os filtros atuais.</div>') + '</div>'
         + '</div>'
-        + '<div class="table-card section-space"><h3 class="card-title">Fluxo financeiro</h3>' + (movRows ? '<table class="simple-table"><thead><tr><th>Data</th><th>OS</th><th>Tipo</th><th>Descrição</th><th>Status</th><th>Valor</th></tr></thead><tbody>' + movRows + '</tbody></table>' : '<div class="empty-state">Nenhum movimento encontrado.</div>') + '</div>'
+        + '<div class="table-card section-space"><h3 class="card-title">Fluxo financeiro</h3>'
+        + '<div class="top-alert">Agora você pode pagar, editar valor e excluir lançamentos direto nesta tela. NF automática pode ser paga e editada, mas não apagada por engano.</div>'
+        + (movRows ? '<table class="simple-table"><thead><tr><th>Data</th><th>OS</th><th>Tipo</th><th>Descrição</th><th>Status</th><th>Valor</th><th>Ações</th></tr></thead><tbody>' + movRows + '</tbody></table>' : '<div class="empty-state">Nenhum movimento encontrado.</div>')
+        + '</div>'
         + '<div class="table-card section-space"><h3 class="card-title">Fechamento por obra</h3>' + (obraRows ? '<table class="simple-table"><thead><tr><th>OS</th><th>Obra</th><th>Recebido</th><th>Pendente</th><th>Resultado líquido</th><th>Ações</th></tr></thead><tbody>' + obraRows + '</tbody></table>' : '<div class="empty-state">Nenhuma obra cadastrada.</div>') + '</div>'
       );
+
+      var filtroObra = document.getElementById('fin-filtro-obra');
+      if (filtroObra) filtroObra.value = filtros.obra || '';
     } catch (err) {
-      OBRAS.ui.setHTML('screen-container', '<div class="panel"><h2>Erro ao abrir o financeiro</h2><div class="muted">' + OBRAS.helpers.escape(err && err.message ? err.message : 'Falha inesperada') + '</div></div>');
-      if (window.console) console.error(err);
+      console.error(err);
+      OBRAS.ui.setHTML('screen-container', '<div class="panel" style="padding:22px"><h2>Erro ao montar financeiro</h2><div class="muted">Revise o console e recarregue a base.</div></div>');
     }
   }
 };

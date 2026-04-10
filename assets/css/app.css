@@ -555,3 +555,7 @@ textarea{
 .login-actions-column{display:flex;flex-direction:column;gap:10px}
 .btn-link{background:transparent;border:none;color:var(--brand);padding:0 4px;box-shadow:none}
 .btn-link:hover{text-decoration:underline;background:transparent}
+
+
+.btn-primary-lite{background:#e4ecff;border-color:#bfd0ff;color:#2954c8}
+.btn-primary-lite:hover{filter:brightness(.98)}

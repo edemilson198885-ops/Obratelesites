@@ -340,6 +340,7 @@ OBRAS.services = {
       OBRAS.state.session.accessMode = 'supabase-auth';
       OBRAS.state.currentScreen = OBRAS.config.SCREENS.DASHBOARD;
       OBRAS.stateApi.save();
+      try { await OBRAS.services.bootstrapAutoSync(); } catch (e) { console.error(e); }
       return true;
     } catch (err) {
       console.error(err);
@@ -1287,6 +1288,138 @@ OBRAS.services = {
       OBRAS.ui.toast('Falha ao enviar recuperação.');
       return false;
     }
+  },
+
+
+  getFinanceEntryConfig: function(kind){
+    return {
+      recebimentos: { key:'recebimentos', label:'Recebimento' },
+      pagamentosParceiros: { key:'pagamentosParceiros', label:'Pagamento parceiro' },
+      despesas: { key:'despesas', label:'Despesa da obra' },
+      despesasGerais: { key:'despesasGerais', label:'Despesa geral' }
+    }[kind] || null;
+  },
+
+  getFinanceEntryById: function(kind, id){
+    var cfg = this.getFinanceEntryConfig(kind);
+    if (!cfg) return null;
+    return (OBRAS.state[cfg.key] || []).find(function(item){ return item.id === id; }) || null;
+  },
+
+  editFinanceEntry: function(kind, id){
+    var cfg = this.getFinanceEntryConfig(kind);
+    if (!cfg) return;
+    var item = this.getFinanceEntryById(kind, id);
+    if (!item) {
+      OBRAS.ui.toast('Lançamento não encontrado.');
+      return;
+    }
+
+    var currentValue = Number(item.valor || 0);
+    var rawValue = window.prompt('Novo valor para ' + cfg.label + ':', String(currentValue).replace('.', ','));
+    if (rawValue === null) return;
+    var parsedValue = OBRAS.helpers.toNumber ? OBRAS.helpers.toNumber(rawValue) : Number(String(rawValue).replace(',', '.'));
+    if (!parsedValue) {
+      OBRAS.ui.toast('Valor inválido.');
+      return;
+    }
+
+    var dateField = kind === 'recebimentos' ? 'dataRecebimento' : (kind === 'despesas' ? 'dataVencimento' : 'dataVencimento');
+    var currentDate = item[dateField] || item.dataDespesa || item.data || OBRAS.helpers.todayISO();
+    var newDate = window.prompt('Nova data (AAAA-MM-DD):', currentDate);
+    if (newDate === null) return;
+    newDate = String(newDate || '').trim() || currentDate;
+
+    var currentDesc = item.descricao || item.observacoes || item.observacao || item.tipoDespesa || '';
+    var newDesc = window.prompt('Descrição / observação:', currentDesc);
+    if (newDesc === null) return;
+
+    item.valor = parsedValue;
+
+    if (kind === 'recebimentos') {
+      item.dataRecebimento = newDate;
+      item.descricao = newDesc || item.descricao || 'Recebimento';
+      item.observacoes = item.observacoes !== undefined ? newDesc : (item.observacoes || '');
+    } else if (kind === 'pagamentosParceiros') {
+      item.dataVencimento = newDate;
+      item.descricao = newDesc || item.descricao || 'Pagamento parceiro';
+      item.observacoes = item.observacoes !== undefined ? newDesc : (item.observacoes || '');
+      if (item.dataPagamentoReal && item.dataPagamentoReal !== '') {
+        var keepPaidDate = window.confirm('Manter a baixa como paga na nova data?');
+        if (keepPaidDate) item.dataPagamentoReal = newDate;
+      }
+    } else if (kind === 'despesas') {
+      var tipoAtual = item.tipoDespesa || 'Despesa obra';
+      var novoTipo = window.prompt('Tipo da despesa:', tipoAtual);
+      if (novoTipo === null) return;
+      item.dataVencimento = newDate;
+      item.dataDespesa = item.dataDespesa || newDate;
+      item.tipoDespesa = novoTipo || tipoAtual;
+      item.observacoes = newDesc || item.observacoes || '';
+      if (item.dataPagamentoReal && item.dataPagamentoReal !== '') {
+        var keepPaidDate2 = window.confirm('Manter a baixa como paga na nova data?');
+        if (keepPaidDate2) item.dataPagamentoReal = newDate;
+      }
+    } else if (kind === 'despesasGerais') {
+      var tipoAtualGeral = item.tipoDespesa || 'Despesa geral';
+      var novoTipoGeral = window.prompt('Tipo da despesa geral:', tipoAtualGeral);
+      if (novoTipoGeral === null) return;
+      item.dataVencimento = newDate;
+      item.tipoDespesa = novoTipoGeral || tipoAtualGeral;
+      item.descricao = newDesc || item.descricao || 'Despesa geral';
+      if (item.dataPagamentoReal && item.dataPagamentoReal !== '') {
+        var keepPaidDate3 = window.confirm('Manter a baixa como paga na nova data?');
+        if (keepPaidDate3) item.dataPagamentoReal = newDate;
+      }
+    }
+
+    item.updatedAt = new Date().toISOString();
+    OBRAS.stateApi.save();
+    OBRAS.app.render();
+    OBRAS.ui.toast(cfg.label + ' atualizado.');
+  },
+
+  payFinanceEntry: function(kind, id){
+    var cfg = this.getFinanceEntryConfig(kind);
+    if (!cfg) return;
+    var item = this.getFinanceEntryById(kind, id);
+    if (!item) {
+      OBRAS.ui.toast('Lançamento não encontrado.');
+      return;
+    }
+    var current = item.dataPagamentoReal || OBRAS.helpers.todayISO();
+    var paidAt = window.prompt('Confirmar data de pagamento (AAAA-MM-DD):', current);
+    if (paidAt === null) return;
+    paidAt = String(paidAt || '').trim() || OBRAS.helpers.todayISO();
+
+    if (kind === 'recebimentos') {
+      item.dataRecebimento = paidAt;
+    } else {
+      item.dataPagamentoReal = paidAt;
+      if (!item.dataVencimento) item.dataVencimento = paidAt;
+      if (kind === 'despesas' && !item.dataDespesa) item.dataDespesa = paidAt;
+    }
+
+    item.updatedAt = new Date().toISOString();
+    OBRAS.stateApi.save();
+    OBRAS.app.render();
+    OBRAS.ui.toast(cfg.label + ' marcado como pago.');
+  },
+
+  deleteFinanceEntry: function(kind, id){
+    var cfg = this.getFinanceEntryConfig(kind);
+    if (!cfg) return;
+    var item = this.getFinanceEntryById(kind, id);
+    if (!item) return;
+    if (kind === 'despesas' && (item.origemLancamento === 'automatico_obra_nf' || item.geradaAutomaticamente === true)) {
+      OBRAS.ui.toast('Use editar ou pagar para a NF automática.');
+      return;
+    }
+    if (!window.confirm('Excluir ' + cfg.label.toLowerCase() + '?')) return;
+    OBRAS.state[cfg.key] = (OBRAS.state[cfg.key] || []).filter(function(entry){ return entry.id !== id; });
+    OBRAS.stateApi.save();
+    OBRAS.app.render();
+    OBRAS.ui.toast(cfg.label + ' excluído.');
   },
 
 };

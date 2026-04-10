@@ -91,6 +91,9 @@ OBRAS.events = {
       if (act === 'delete-cadastro') OBRAS.services.deleteCadastro(action.getAttribute('data-kind'), id);
       if (act === 'edit-obra-lanc') OBRAS.services.beginEditObraLancamento(action.getAttribute('data-kind'), id);
       if (act === 'delete-obra-lanc') OBRAS.services.deleteObraLancamento(action.getAttribute('data-kind'), id);
+      if (act === 'pay-finance-entry') OBRAS.services.payFinanceEntry(action.getAttribute('data-kind'), id);
+      if (act === 'edit-finance-entry') OBRAS.services.editFinanceEntry(action.getAttribute('data-kind'), id);
+      if (act === 'delete-finance-entry') OBRAS.services.deleteFinanceEntry(action.getAttribute('data-kind'), id);
     });
   }
 };
