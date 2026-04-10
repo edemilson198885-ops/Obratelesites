@@ -36,14 +36,21 @@ OBRAS.events = {
       }
 
       if (e.target.id === 'login-local-btn') {
-        var input = document.getElementById('login-name');
-        OBRAS.services.loginLocal(input && input.value ? input.value : 'Edemilson');
-        OBRAS.app.render();
-        OBRAS.ui.toast('Acesso local liberado.');
+        var input = document.getElementById('login-email');
+        var pass = document.getElementById('login-password');
+        OBRAS.services.loginSupabase(input && input.value ? input.value : '', pass && pass.value ? pass.value : '').then(function(ok){
+          if (ok) {
+            OBRAS.app.render();
+            OBRAS.ui.toast('Login realizado com sucesso.');
+          }
+        });
         return;
       }
       if (e.target.id === 'use-demo-btn') { OBRAS.services.useDemoData(); return; }
-      if (e.target.id === 'logout-btn') { OBRAS.services.logout(); OBRAS.app.render(); return; }
+      if (e.target.id === 'logout-btn') {
+        OBRAS.services.logoutSupabase().then(function(){ OBRAS.app.render(); });
+        return;
+      }
       if (e.target.id === 'reset-phase2-btn') { OBRAS.services.resetBase(); return; }
 
       if (e.target.id === 'obra-save-btn') { OBRAS.services.submitObra(); return; }
@@ -77,6 +84,8 @@ OBRAS.events = {
       if (act === 'delete-obra') OBRAS.services.deleteObra(id);
       if (act === 'edit-cadastro') OBRAS.services.editCadastro(action.getAttribute('data-kind'), id);
       if (act === 'delete-cadastro') OBRAS.services.deleteCadastro(action.getAttribute('data-kind'), id);
+      if (act === 'edit-obra-lanc') OBRAS.services.beginEditObraLancamento(action.getAttribute('data-kind'), id);
+      if (act === 'delete-obra-lanc') OBRAS.services.deleteObraLancamento(action.getAttribute('data-kind'), id);
     });
   }
 };

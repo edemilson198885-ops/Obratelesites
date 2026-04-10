@@ -205,9 +205,20 @@ OBRAS.services = {
     var obra = this.getSelectedObra();
     if (!obra) return;
     var valor = OBRAS.helpers.toNumber(document.getElementById('det-rec-valor').value);
-    var data = document.getElementById('det-rec-data').value || OBRAS.helpers.today();
+    var data = document.getElementById('det-rec-data').value || OBRAS.helpers.todayISO();
     var obs = document.getElementById('det-rec-obs').value.trim();
     if (!valor) { OBRAS.ui.toast('Informe o valor do recebimento.'); return; }
+    var edit = OBRAS.state.form && OBRAS.state.form.obraLancamentoEdit;
+    if (edit && edit.kind === 'rec') {
+      var rec = (OBRAS.state.recebimentos || []).find(function(x){ return x.id === edit.id; });
+      if (!rec) { OBRAS.ui.toast('Recebimento não encontrado.'); return; }
+      OBRAS.services.updateObraLancamento('rec', rec, valor, data, obs, '');
+      delete OBRAS.state.form.obraLancamentoEdit;
+      OBRAS.stateApi.save();
+      OBRAS.app.render();
+      OBRAS.ui.toast('Recebimento atualizado.');
+      return;
+    }
     OBRAS.state.recebimentos.push({
       id: OBRAS.helpers.uid('rec'),
       obraId: obra.id,
@@ -216,6 +227,7 @@ OBRAS.services = {
       data: data,
       dataRecebimento: data,
       observacao: obs,
+      observacoes: obs,
       descricao: obs || 'Recebimento',
       status: 'recebido'
     });
@@ -228,9 +240,20 @@ OBRAS.services = {
     var obra = this.getSelectedObra();
     if (!obra) return;
     var valor = OBRAS.helpers.toNumber(document.getElementById('det-pag-valor').value);
-    var data = document.getElementById('det-pag-data').value || OBRAS.helpers.today();
+    var data = document.getElementById('det-pag-data').value || OBRAS.helpers.todayISO();
     var obs = document.getElementById('det-pag-obs').value.trim();
     if (!valor) { OBRAS.ui.toast('Informe o valor do pagamento.'); return; }
+    var edit = OBRAS.state.form && OBRAS.state.form.obraLancamentoEdit;
+    if (edit && edit.kind === 'pag') {
+      var pag = (OBRAS.state.pagamentosParceiros || []).find(function(x){ return x.id === edit.id; });
+      if (!pag) { OBRAS.ui.toast('Pagamento não encontrado.'); return; }
+      OBRAS.services.updateObraLancamento('pag', pag, valor, data, obs, '');
+      delete OBRAS.state.form.obraLancamentoEdit;
+      OBRAS.stateApi.save();
+      OBRAS.app.render();
+      OBRAS.ui.toast('Pagamento parceiro atualizado.');
+      return;
+    }
     OBRAS.state.pagamentosParceiros.push({
       id: OBRAS.helpers.uid('pag'),
       obraId: obra.id,
@@ -240,6 +263,7 @@ OBRAS.services = {
       dataVencimento: data,
       dataPagamentoReal: data,
       observacao: obs,
+      observacoes: obs,
       descricao: obs || 'Pagamento parceiro',
       status: 'pago'
     });
@@ -252,16 +276,28 @@ OBRAS.services = {
     var obra = this.getSelectedObra();
     if (!obra) return;
     var valor = OBRAS.helpers.toNumber(document.getElementById('det-desp-valor').value);
-    var data = document.getElementById('det-desp-data').value || OBRAS.helpers.today();
+    var data = document.getElementById('det-desp-data').value || OBRAS.helpers.todayISO();
     var tipo = document.getElementById('det-desp-tipo').value || 'obra';
     var obs = document.getElementById('det-desp-obs').value.trim();
     if (!valor) { OBRAS.ui.toast('Informe o valor da despesa.'); return; }
+    var edit = OBRAS.state.form && OBRAS.state.form.obraLancamentoEdit;
+    if (edit && edit.kind === 'desp') {
+      var desp = (OBRAS.state.despesas || []).find(function(x){ return x.id === edit.id; });
+      if (!desp) { OBRAS.ui.toast('Despesa não encontrada.'); return; }
+      OBRAS.services.updateObraLancamento('desp', desp, valor, data, obs, tipo);
+      delete OBRAS.state.form.obraLancamentoEdit;
+      OBRAS.stateApi.save();
+      OBRAS.app.render();
+      OBRAS.ui.toast('Despesa atualizada.');
+      return;
+    }
     OBRAS.state.despesas.push({
       id: OBRAS.helpers.uid('desp'),
       obraId: obra.id,
       os: obra.numeroOS,
       valor: valor,
       data: data,
+      dataDespesa: data,
       dataVencimento: data,
       dataPagamentoReal: data,
       tipo: tipo,
@@ -275,18 +311,83 @@ OBRAS.services = {
     OBRAS.ui.toast('Despesa da obra lançada.');
   },
 
-  loginLocal: function(name){
-    OBRAS.state.session.loggedIn = true;
-    OBRAS.state.session.userName = name || 'Edemilson';
-    OBRAS.state.currentScreen = OBRAS.config.SCREENS.DASHBOARD;
-    OBRAS.stateApi.save();
+  loginLocal: function(name, password){
+    return this.loginSupabase(name, password);
   },
   logout: function(){
+    return this.logoutSupabase();
+  },
+
+  loginSupabase: async function(email, password){
+    try {
+      if (!String(email || '').trim() || !String(password || '').trim()) {
+        OBRAS.ui.toast('Informe email e senha.');
+        return false;
+      }
+      var response = await OBRAS.services.getSupabaseClient().auth.signInWithPassword({
+        email: String(email).trim(),
+        password: String(password)
+      });
+      if (response.error) {
+        OBRAS.ui.toast('Login inválido: ' + response.error.message);
+        return false;
+      }
+      var user = response.data && response.data.user ? response.data.user : null;
+      OBRAS.state.session.loggedIn = true;
+      OBRAS.state.session.userName = (user && user.user_metadata && (user.user_metadata.nome || user.user_metadata.name)) || (user && user.email) || String(email).trim();
+      OBRAS.state.session.userEmail = (user && user.email) || String(email).trim();
+      OBRAS.state.session.userId = (user && user.id) || '';
+      OBRAS.state.session.accessMode = 'supabase-auth';
+      OBRAS.state.currentScreen = OBRAS.config.SCREENS.DASHBOARD;
+      OBRAS.stateApi.save();
+      return true;
+    } catch (err) {
+      console.error(err);
+      OBRAS.ui.toast('Erro ao entrar com Supabase.');
+      return false;
+    }
+  },
+
+  restoreSupabaseSession: async function(){
+    try {
+      var response = await OBRAS.services.getSupabaseClient().auth.getSession();
+      if (response.error) {
+        console.error(response.error);
+        return false;
+      }
+      var session = response.data && response.data.session ? response.data.session : null;
+      if (!session || !session.user) return false;
+      var user = session.user;
+      OBRAS.state.session.loggedIn = true;
+      OBRAS.state.session.userName = (user.user_metadata && (user.user_metadata.nome || user.user_metadata.name)) || user.email || 'Usuário';
+      OBRAS.state.session.userEmail = user.email || '';
+      OBRAS.state.session.userId = user.id || '';
+      OBRAS.state.session.accessMode = 'supabase-auth';
+      OBRAS.state.currentScreen = OBRAS.config.SCREENS.DASHBOARD;
+      OBRAS.stateApi.save();
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  },
+
+  logoutSupabase: async function(){
+    try {
+      await OBRAS.services.getSupabaseClient().auth.signOut();
+    } catch (err) {
+      console.error(err);
+    }
     OBRAS.state.session.loggedIn = false;
+    OBRAS.state.session.userName = '';
+    OBRAS.state.session.userEmail = '';
+    OBRAS.state.session.userId = '';
+    OBRAS.state.session.accessMode = '';
     OBRAS.state.currentScreen = OBRAS.config.SCREENS.LOGIN;
     OBRAS.state.form = {};
     OBRAS.stateApi.save();
   },
+
   resetBase: function(){
     if (!window.confirm('Resetar a base local da Fase 2?')) return;
     OBRAS.storage.reset();
@@ -1101,6 +1202,67 @@ OBRAS.services = {
       if (d.origemLancamento !== 'automatico_obra_nf' && d.geradaAutomaticamente !== true) return true;
       return !!validOS[d.os];
     });
+  },
+
+
+  getObraLancamentoConfig: function(kind){
+    var map = {
+      rec: { key:'recebimentos', prefix:'det-rec', label:'Recebimento' },
+      pag: { key:'pagamentosParceiros', prefix:'det-pag', label:'Pagamento parceiro' },
+      desp: { key:'despesas', prefix:'det-desp', label:'Despesa da obra' }
+    };
+    return map[kind] || null;
+  },
+
+  beginEditObraLancamento: function(kind, id){
+    var cfg = this.getObraLancamentoConfig(kind);
+    if (!cfg) return;
+    var item = (OBRAS.state[cfg.key] || []).find(function(x){ return x.id === id; });
+    if (!item) {
+      OBRAS.ui.toast('Lançamento não encontrado.');
+      return;
+    }
+    OBRAS.state.form = OBRAS.state.form || {};
+    OBRAS.state.form.obraLancamentoEdit = { kind: kind, id: id };
+    OBRAS.stateApi.save();
+    OBRAS.app.render();
+    OBRAS.ui.toast('Editando ' + cfg.label.toLowerCase() + '.');
+  },
+
+  updateObraLancamento: function(kind, item, valor, data, obs, tipo){
+    item.valor = valor;
+    item.data = data;
+    item.observacao = obs;
+    item.observacoes = obs;
+    item.descricao = obs || item.descricao || (kind === 'rec' ? 'Recebimento' : kind === 'pag' ? 'Pagamento parceiro' : 'Despesa da obra');
+    if (kind === 'rec') {
+      item.dataRecebimento = data;
+      item.status = 'recebido';
+    } else if (kind === 'pag') {
+      item.dataVencimento = data;
+      item.dataPagamentoReal = data;
+      item.status = 'pago';
+    } else if (kind === 'desp') {
+      item.dataDespesa = data;
+      item.dataVencimento = data;
+      item.dataPagamentoReal = data;
+      item.tipo = tipo || item.tipo || 'obra';
+      item.tipoDespesa = tipo || item.tipoDespesa || 'obra';
+      item.status = 'pago';
+    }
+  },
+
+  deleteObraLancamento: function(kind, id){
+    var cfg = this.getObraLancamentoConfig(kind);
+    if (!cfg) return;
+    if (!window.confirm('Excluir este lançamento?')) return;
+    OBRAS.state[cfg.key] = (OBRAS.state[cfg.key] || []).filter(function(x){ return x.id !== id; });
+    if (OBRAS.state.form && OBRAS.state.form.obraLancamentoEdit && OBRAS.state.form.obraLancamentoEdit.id === id) {
+      delete OBRAS.state.form.obraLancamentoEdit;
+    }
+    OBRAS.stateApi.save();
+    OBRAS.app.render();
+    OBRAS.ui.toast(cfg.label + ' excluído.');
   },
 
 };

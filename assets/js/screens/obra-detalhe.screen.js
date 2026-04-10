@@ -1,11 +1,28 @@
 window.OBRAS = window.OBRAS || {};
 OBRAS.obraDetalheScreen = {
-  listRows: function(items, empty){
+  itemsByObra: function(list, obra){
+    return (list || []).filter(function(x){
+      return x.obraId === obra.id || x.os === obra.numeroOS;
+    }).sort(function(a,b){
+      var da = String(a.dataRecebimento || a.dataVencimento || a.dataDespesa || a.data || '');
+      var db = String(b.dataRecebimento || b.dataVencimento || b.dataDespesa || b.data || '');
+      return db.localeCompare(da);
+    });
+  },
+
+  listRows: function(items, empty, kind){
     if (!items.length) return '<div class="empty-state">' + empty + '</div>';
     return '<div class="detail-list">' + items.map(function(item){
-      return '<div class="list-item">'
-        + '<div><strong>' + OBRAS.helpers.money(item.valor) + '</strong><div class="muted">' + OBRAS.helpers.escape(item.data || '') + (item.observacao ? ' · ' + OBRAS.helpers.escape(item.observacao) : '') + '</div></div>'
-        + '<div class="badge badge-info">' + OBRAS.helpers.escape(item.status || item.tipo || 'lançado') + '</div>'
+      var date = item.dataRecebimento || item.dataVencimento || item.dataDespesa || item.data || '';
+      var obs = item.observacoes || item.observacao || item.descricao || '';
+      var autoNf = item.origemLancamento === 'automatico_obra_nf' || item.geradaAutomaticamente === true;
+      return '<div class="list-item launch-item">'
+        + '<div><strong>' + OBRAS.helpers.money(item.valor) + '</strong><div class="muted">' + OBRAS.helpers.escape(date) + (obs ? ' · ' + OBRAS.helpers.escape(obs) : '') + '</div></div>'
+        + '<div class="launch-actions">'
+        + '<span class="badge badge-' + (autoNf ? 'warning' : 'info') + '">' + OBRAS.helpers.escape(item.status || item.tipoDespesa || item.tipo || 'lançado') + '</span>'
+        + '<button class="small-btn btn-soft" data-action="edit-obra-lanc" data-kind="' + kind + '" data-id="' + item.id + '">Editar</button>'
+        + (autoNf ? '' : '<button class="small-btn btn-danger" data-action="delete-obra-lanc" data-kind="' + kind + '" data-id="' + item.id + '">Excluir</button>')
+        + '</div>'
         + '</div>';
     }).join('') + '</div>';
   },
@@ -18,17 +35,18 @@ OBRAS.obraDetalheScreen = {
     }
 
     var metric = OBRAS.rules.obraMetrics(obra, OBRAS.state);
-    var recebimentos = (OBRAS.state.recebimentos || []).filter(function(x){ return x.obraId === obra.id; }).sort(function(a,b){ return (b.data||'').localeCompare(a.data||''); });
-    var pagamentos = (OBRAS.state.pagamentosParceiros || []).filter(function(x){ return x.obraId === obra.id; }).sort(function(a,b){ return (b.data||'').localeCompare(a.data||''); });
-    var despesas = (OBRAS.state.despesas || []).filter(function(x){ return x.obraId === obra.id; }).sort(function(a,b){ return (b.data||'').localeCompare(a.data||''); });
+    var recebimentos = this.itemsByObra(OBRAS.state.recebimentos, obra);
+    var pagamentos = this.itemsByObra(OBRAS.state.pagamentosParceiros, obra);
+    var despesas = this.itemsByObra(OBRAS.state.despesas, obra);
+    var edit = (OBRAS.state.form && OBRAS.state.form.obraLancamentoEdit) || {};
 
     var html = ''
       + '<div class="screen-head">'
-      + '  <div><h1 class="screen-title">Detalhe da obra</h1><div class="screen-subtitle">Resumo completo da obra, com lançamentos e visão financeira por OS.</div></div>'
+      + '  <div><h1 class="screen-title">Detalhe da obra</h1><div class="screen-subtitle">Resumo completo da obra, com lançamentos, edição rápida e visão financeira por OS.</div></div>'
       + '  <div class="actions-row"><button class="btn" data-go="obras">Voltar para central</button></div>'
       + '</div>'
       + '<div class="detail-hero">'
-      + '  <div><div class="muted">OS ' + OBRAS.helpers.escape(obra.numeroOS) + '</div><h2>' + OBRAS.helpers.escape(obra.nome) + '</h2><div class="muted">' + OBRAS.helpers.escape(obra.cidade || '-') + ' · ' + OBRAS.helpers.escape(obra.parceiroNome || '-') + (obra.clienteNome ? ' · ' + OBRAS.helpers.escape(obra.clienteNome) : '') + '</div></div>'
+      + '  <div><div class="muted">OS ' + OBRAS.helpers.escape(obra.numeroOS) + '</div><h2>' + OBRAS.helpers.escape(obra.siteTorre || obra.nome || '-') + '</h2><div class="muted">' + OBRAS.helpers.escape(obra.cidade || '-') + ' · ' + OBRAS.helpers.escape(obra.parceiroNome || '-') + (obra.clienteNome ? ' · ' + OBRAS.helpers.escape(obra.clienteNome) : '') + '</div></div>'
       + '  <div class="detail-badges">' + OBRAS.ui.badge(obra.etapa || '-', 'info') + OBRAS.ui.badge(obra.statusObra || '-', OBRAS.ui.toneByStatus(obra.statusObra || '-')) + '</div>'
       + '</div>'
       + '<div class="kpi-grid">'
@@ -39,28 +57,48 @@ OBRAS.obraDetalheScreen = {
       + '</div>'
       + '<div class="detail-grid">'
       + '  <div class="table-card"><h3 class="card-title">Recebimentos</h3>'
-      + '    <div class="inline-form"><input id="det-rec-valor" placeholder="Valor" /><input id="det-rec-data" type="date" value="' + OBRAS.helpers.todayISO() + '" /><input id="det-rec-obs" placeholder="Observação" /><button class="btn btn-primary" id="det-rec-btn">Lançar</button></div>'
-      +       OBRAS.obraDetalheScreen.listRows(recebimentos, 'Nenhum recebimento lançado para esta obra.')
+      + '    <div class="inline-form"><input id="det-rec-valor" placeholder="Valor" /><input id="det-rec-data" type="date" value="' + OBRAS.helpers.todayISO() + '" /><input id="det-rec-obs" placeholder="Observação" /><button class="btn btn-primary" id="det-rec-btn">' + (edit.kind === 'rec' ? 'Salvar edição' : 'Lançar') + '</button></div>'
+      +       OBRAS.obraDetalheScreen.listRows(recebimentos, 'Nenhum recebimento lançado para esta obra.', 'rec')
       + '  </div>'
       + '  <div class="table-card"><h3 class="card-title">Pagamentos parceiros</h3>'
-      + '    <div class="inline-form"><input id="det-pag-valor" placeholder="Valor" /><input id="det-pag-data" type="date" value="' + OBRAS.helpers.todayISO() + '" /><input id="det-pag-obs" placeholder="Observação" /><button class="btn btn-primary" id="det-pag-btn">Lançar</button></div>'
-      +       OBRAS.obraDetalheScreen.listRows(pagamentos, 'Nenhum pagamento parceiro lançado para esta obra.')
+      + '    <div class="inline-form"><input id="det-pag-valor" placeholder="Valor" /><input id="det-pag-data" type="date" value="' + OBRAS.helpers.todayISO() + '" /><input id="det-pag-obs" placeholder="Observação" /><button class="btn btn-primary" id="det-pag-btn">' + (edit.kind === 'pag' ? 'Salvar edição' : 'Lançar') + '</button></div>'
+      +       OBRAS.obraDetalheScreen.listRows(pagamentos, 'Nenhum pagamento parceiro lançado para esta obra.', 'pag')
       + '  </div>'
       + '</div>'
       + '<div class="content-grid section-space">'
       + '  <div class="table-card"><h3 class="card-title">Despesas da obra</h3>'
-      + '    <div class="inline-form"><input id="det-desp-valor" placeholder="Valor" /><input id="det-desp-data" type="date" value="' + OBRAS.helpers.todayISO() + '" /><select id="det-desp-tipo"><option value="obra">Despesa obra</option><option value="mobilizacao">Mobilização</option><option value="material">Material</option><option value="viagem">Viagem</option></select><input id="det-desp-obs" placeholder="Observação" /><button class="btn btn-primary" id="det-desp-btn">Lançar</button></div>'
-      +       OBRAS.obraDetalheScreen.listRows(despesas, 'Nenhuma despesa lançada para esta obra.')
+      + '    <div class="inline-form"><input id="det-desp-valor" placeholder="Valor" /><input id="det-desp-data" type="date" value="' + OBRAS.helpers.todayISO() + '" /><select id="det-desp-tipo"><option value="obra">Despesa obra</option><option value="mobilizacao">Mobilização</option><option value="material">Material</option><option value="viagem">Viagem</option><option value="Imposto NF">Imposto NF</option></select><input id="det-desp-obs" placeholder="Observação" /><button class="btn btn-primary" id="det-desp-btn">' + (edit.kind === 'desp' ? 'Salvar edição' : 'Lançar') + '</button></div>'
+      +       OBRAS.obraDetalheScreen.listRows(despesas, 'Nenhuma despesa lançada para esta obra.', 'desp')
       + '  </div>'
       + '  <div class="list-card"><h3 class="card-title">Resumo operacional</h3>'
       + '    <div class="inline-stat"><span class="muted">Parceiro</span><strong>' + OBRAS.helpers.escape(obra.parceiroNome || '-') + '</strong></div>'
       + '    <div class="inline-stat"><span class="muted">Cliente</span><strong>' + OBRAS.helpers.escape(obra.clienteNome || '-') + '</strong></div>'
       + '    <div class="inline-stat"><span class="muted">Pagamentos</span><strong>' + OBRAS.helpers.money(metric.pagoParceiros) + '</strong></div>'
       + '    <div class="inline-stat"><span class="muted">Despesas</span><strong>' + OBRAS.helpers.money(metric.despesasPagas) + '</strong></div>'
-      + '    <div class="top-alert">Tela própria da obra com visão rápida da OS.</div>'
+      + '    <div class="top-alert">Agora a tela da obra permite lançar, editar e excluir sem sair da OS.</div>'
       + '  </div>'
       + '</div>';
 
     OBRAS.ui.setHTML('screen-container', html);
+
+    var collections = { rec: recebimentos, pag: pagamentos, desp: despesas };
+    if (edit.kind && collections[edit.kind]) {
+      var item = collections[edit.kind].find(function(x){ return x.id === edit.id; });
+      if (item) {
+        var prefix = edit.kind === 'rec' ? 'det-rec' : edit.kind === 'pag' ? 'det-pag' : 'det-desp';
+        var date = item.dataRecebimento || item.dataVencimento || item.dataDespesa || item.data || OBRAS.helpers.todayISO();
+        var obs = item.observacoes || item.observacao || item.descricao || '';
+        var valEl = document.getElementById(prefix + '-valor');
+        var dateEl = document.getElementById(prefix + '-data');
+        var obsEl = document.getElementById(prefix + '-obs');
+        if (valEl) valEl.value = Number(item.valor || 0);
+        if (dateEl) dateEl.value = date;
+        if (obsEl) obsEl.value = obs;
+        if (edit.kind === 'desp') {
+          var tipoEl = document.getElementById('det-desp-tipo');
+          if (tipoEl) tipoEl.value = item.tipoDespesa || item.tipo || 'obra';
+        }
+      }
+    }
   }
 };

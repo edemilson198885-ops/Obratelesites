@@ -18,13 +18,19 @@ OBRAS.app = {
     OBRAS.ui.renderBottomNav();
     OBRAS.router.renderCurrent();
   },
-  boot: function(){
+  boot: async function(){
     OBRAS.stateApi.initialize(false);
     OBRAS.services.enableAutoSaveSync();
     OBRAS.events.bindGlobal();
     this.registerScreens();
+    var hasSession = await OBRAS.services.restoreSupabaseSession();
+    if (!hasSession) {
+      OBRAS.state.currentScreen = OBRAS.config.SCREENS.LOGIN;
+    }
     this.render();
-    OBRAS.services.bootstrapAutoSync();
+    if (hasSession) {
+      OBRAS.services.bootstrapAutoSync();
+    }
   }
 };
 window.addEventListener('DOMContentLoaded', function(){ OBRAS.app.boot(); });

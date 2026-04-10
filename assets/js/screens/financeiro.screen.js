@@ -100,7 +100,7 @@ OBRAS.financeiroScreen = {
           + '<td>' + OBRAS.helpers.money(o.totalRecebido) + '</td>'
           + '<td>' + OBRAS.helpers.money(o.saldoParceiro + o.despesasPendentes) + '</td>'
           + '<td>' + OBRAS.helpers.money(o.resultadoLiquido) + '</td>'
-          + '<td><button class="small-btn" data-action="open-obra" data-id="' + o.id + '">Abrir</button></td>'
+          + '<td><div class="table-actions actions-inline"><button class="small-btn" data-action="open-obra" data-id="' + o.id + '">Abrir</button><button class="small-btn btn-soft" data-action="edit-obra" data-id="' + o.id + '">Editar</button><button class="small-btn btn-danger" data-action="delete-obra" data-id="' + o.id + '">Excluir</button></div></td>'
           + '</tr>';
       }).join('');
 
@@ -151,7 +151,7 @@ OBRAS.financeiroScreen = {
         + '  <div class="list-card"><h3 class="card-title">Contas a pagar</h3>' + (contasPagar || '<div class="empty-state">Nenhum compromisso em aberto com os filtros atuais.</div>') + '</div>'
         + '</div>'
         + '<div class="table-card section-space"><h3 class="card-title">Fluxo financeiro</h3>' + (movRows ? '<table class="simple-table"><thead><tr><th>Data</th><th>OS</th><th>Tipo</th><th>Descrição</th><th>Status</th><th>Valor</th></tr></thead><tbody>' + movRows + '</tbody></table>' : '<div class="empty-state">Nenhum movimento encontrado.</div>') + '</div>'
-        + '<div class="table-card section-space"><h3 class="card-title">Fechamento por obra</h3>' + (obraRows ? '<table class="simple-table"><thead><tr><th>OS</th><th>Obra</th><th>Recebido</th><th>Pendente</th><th>Resultado líquido</th><th>Abrir</th></tr></thead><tbody>' + obraRows + '</tbody></table>' : '<div class="empty-state">Nenhuma obra cadastrada.</div>') + '</div>'
+        + '<div class="table-card section-space"><h3 class="card-title">Fechamento por obra</h3>' + (obraRows ? '<table class="simple-table"><thead><tr><th>OS</th><th>Obra</th><th>Recebido</th><th>Pendente</th><th>Resultado líquido</th><th>Ações</th></tr></thead><tbody>' + obraRows + '</tbody></table>' : '<div class="empty-state">Nenhuma obra cadastrada.</div>') + '</div>'
       );
     } catch (err) {
       OBRAS.ui.setHTML('screen-container', '<div class="panel"><h2>Erro ao abrir o financeiro</h2><div class="muted">' + OBRAS.helpers.escape(err && err.message ? err.message : 'Falha inesperada') + '</div></div>');
