@@ -549,3 +549,9 @@ textarea{
 @media (max-width: 1200px){
   .table-actions.actions-inline{flex-wrap:wrap}
 }
+
+
+.login-card-compact{width:min(480px,100%);padding:32px}
+.login-actions-column{display:flex;flex-direction:column;gap:10px}
+.btn-link{background:transparent;border:none;color:var(--brand);padding:0 4px;box-shadow:none}
+.btn-link:hover{text-decoration:underline;background:transparent}
