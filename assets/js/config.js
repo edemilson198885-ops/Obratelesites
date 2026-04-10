@@ -2,7 +2,7 @@
 window.OBRAS = window.OBRAS || {};
 OBRAS.config = {
   APP_NAME: 'Controle de Obras TELESITES',
-  VERSION: '9.3.0-financeiro-completo',
+  VERSION: '9.3.2-blindada-nf',
   STORAGE_KEY: 'obras_v2_phase2',
   LEGACY_STORAGE_KEYS: ['controleObrasV5', 'obras_v2_phase1_demo'],
   SCREENS: {
