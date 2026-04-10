@@ -1265,4 +1265,28 @@ OBRAS.services = {
     OBRAS.ui.toast(cfg.label + ' excluído.');
   },
 
+
+  resetPasswordSupabase: async function(email){
+    try {
+      if (!String(email || '').trim()) {
+        OBRAS.ui.toast('Informe o email para recuperar a senha.');
+        return false;
+      }
+      var response = await OBRAS.services.getSupabaseClient().auth.resetPasswordForEmail(
+        String(email).trim(),
+        { redirectTo: window.location.href }
+      );
+      if (response.error) {
+        OBRAS.ui.toast('Erro ao enviar recuperação: ' + response.error.message);
+        return false;
+      }
+      OBRAS.ui.toast('Email de recuperação enviado.');
+      return true;
+    } catch (err) {
+      console.error(err);
+      OBRAS.ui.toast('Falha ao enviar recuperação.');
+      return false;
+    }
+  },
+
 };

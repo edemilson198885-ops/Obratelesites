@@ -46,6 +46,11 @@ OBRAS.events = {
         });
         return;
       }
+      if (e.target.id === 'forgot-password-btn') {
+        var email = document.getElementById('login-email');
+        OBRAS.services.resetPasswordSupabase(email && email.value ? email.value : '');
+        return;
+      }
       if (e.target.id === 'use-demo-btn') { OBRAS.services.useDemoData(); return; }
       if (e.target.id === 'logout-btn') {
         OBRAS.services.logoutSupabase().then(function(){ OBRAS.app.render(); });

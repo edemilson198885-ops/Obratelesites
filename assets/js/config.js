@@ -2,7 +2,7 @@
 window.OBRAS = window.OBRAS || {};
 OBRAS.config = {
   APP_NAME: 'Controle de Obras TELESITES',
-  VERSION: '9.0.0-login-supabase',
+  VERSION: '9.2.0-base-nova',
   STORAGE_KEY: 'obras_v2_phase2',
   LEGACY_STORAGE_KEYS: ['controleObrasV5', 'obras_v2_phase1_demo'],
   SCREENS: {
@@ -16,7 +16,7 @@ OBRAS.config = {
     RELATORIOS: 'relatorios'
   }
 ,
-  SUPABASE_URL: 'https://qjwrazrmpzkilalhidub.supabase.co',
-  SUPABASE_ANON_KEY: 'sb_publishable_ZcBdLcM57e5N28bY7vTg_Q_fyk6UmOb',
+  SUPABASE_URL: 'https://dixjexualrezdisktegq.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_xCSr_kZ8ipK5GKERM_Hs5A_4aIDFNi3',
   AUTO_SYNC_ENABLED: true
 };
