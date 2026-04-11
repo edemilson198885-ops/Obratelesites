@@ -42,7 +42,9 @@ OBRAS.stateApi = {
     if (legacy && legacy.obras && legacy.recebimentos) {
       return this.normalizeDB(this.migrateLegacy(legacy));
     }
-    return this.normalizeDB(OBRAS.models.createSeedDB());
+
+    // V9.6: base totalmente limpa. Sem seed e sem cadastros padrão.
+    return this.normalizeDB(OBRAS.models.createEmptyDB());
   },
   migrateLegacy: function(source){
     var db = OBRAS.models.createEmptyDB();

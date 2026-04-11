@@ -394,12 +394,12 @@ OBRAS.services = {
     OBRAS.storage.reset();
     OBRAS.stateApi.initialize(true);
     OBRAS.app.render();
-    OBRAS.ui.toast('Base local recriada com sucesso.');
+    OBRAS.ui.toast('Base local zerada com sucesso.');
   },
   useDemoData: function(){
-    OBRAS.state = OBRAS.models.createSeedDB();
+    OBRAS.state = OBRAS.models.createEmptyDB();
     OBRAS.state.session.loggedIn = true;
-    OBRAS.state.session.userName = OBRAS.state.session.userName || 'Edemilson';
+    OBRAS.state.session.userName = OBRAS.state.session.userName || '';
     OBRAS.state.currentScreen = OBRAS.config.SCREENS.DASHBOARD;
     OBRAS.state.form = {};
     OBRAS.stateApi.save();
@@ -599,7 +599,8 @@ OBRAS.services = {
   maxRemoteUpdatedAt: function(snapshot){
     var dates = [];
     Object.keys(snapshot || {}).forEach(function(key){
-      (snapshot[key] || []).forEach(function(row){
+      var rows = Array.isArray(snapshot[key]) ? snapshot[key] : [];
+      rows.forEach(function(row){
         if (row && row.updated_at) dates.push(String(row.updated_at));
         if (row && row.created_at) dates.push(String(row.created_at));
       });
@@ -608,7 +609,21 @@ OBRAS.services = {
   },
 
   remoteHasData: function(snapshot){
-    return Object.keys(snapshot || {}).some(function(key){ return (snapshot[key] || []).length > 0; });
+    return Object.keys(snapshot || {}).some(function(key){
+      var rows = Array.isArray(snapshot[key]) ? snapshot[key] : [];
+      return rows.length > 0;
+    });
+  },
+
+
+  normalizeRemoteSnapshot: function(snapshot){
+    snapshot = snapshot || {};
+    var keys = ['empresas','clientes','parceiros','obras','repasses','recebimentos','pagamentos_parceiros','despesas','despesas_gerais','movimentos_caixa','despesas_fixas','ignorados_recorrencia'];
+    keys.forEach(function(key){
+      if (!Array.isArray(snapshot[key])) snapshot[key] = [];
+    });
+    snapshot._cloudControl = snapshot._cloudControl || {};
+    return snapshot;
   },
 
   inferSeqOS: function(obras){
@@ -921,7 +936,7 @@ OBRAS.services = {
         if (fallback.error) throw fallback.error;
         result = fallback;
       }
-      out[t] = result.data || [];
+      out[t] = Array.isArray(result.data) ? result.data : [];
     }
     out._cloudControl = {
       baseId: OBRAS.state.cloudControl && OBRAS.state.cloudControl.baseId ? OBRAS.state.cloudControl.baseId : '',
@@ -953,7 +968,7 @@ OBRAS.services = {
   bootstrapAutoSync: async function(){
     if (!OBRAS.state.session || !OBRAS.state.session.loggedIn) return false;
     try {
-      var snapshot = await this.fetchRemoteSnapshot();
+      var snapshot = this.normalizeRemoteSnapshot(await this.fetchRemoteSnapshot());
       if (this.hasRemoteData(snapshot)) {
         var check = this.validateRemoteSnapshot(snapshot);
         if (!check.ok) {
@@ -997,7 +1012,7 @@ OBRAS.services = {
 
   forceCloudDownload: async function(){
     try {
-      var snapshot = await this.fetchRemoteSnapshot();
+      var snapshot = this.normalizeRemoteSnapshot(await this.fetchRemoteSnapshot());
       if (!this.hasRemoteData(snapshot)) {
         OBRAS.ui.toast('A nuvem está vazia.');
         return false;
@@ -1357,12 +1372,12 @@ OBRAS.services = {
     OBRAS.storage.reset();
     OBRAS.stateApi.initialize(true);
     OBRAS.app.render();
-    OBRAS.ui.toast('Base local recriada com sucesso.');
+    OBRAS.ui.toast('Base local zerada com sucesso.');
   },
   useDemoData: function(){
-    OBRAS.state = OBRAS.models.createSeedDB();
+    OBRAS.state = OBRAS.models.createEmptyDB();
     OBRAS.state.session.loggedIn = true;
-    OBRAS.state.session.userName = OBRAS.state.session.userName || 'Edemilson';
+    OBRAS.state.session.userName = OBRAS.state.session.userName || '';
     OBRAS.state.currentScreen = OBRAS.config.SCREENS.DASHBOARD;
     OBRAS.state.form = {};
     OBRAS.stateApi.save();
@@ -1562,7 +1577,8 @@ OBRAS.services = {
   maxRemoteUpdatedAt: function(snapshot){
     var dates = [];
     Object.keys(snapshot || {}).forEach(function(key){
-      (snapshot[key] || []).forEach(function(row){
+      var rows = Array.isArray(snapshot[key]) ? snapshot[key] : [];
+      rows.forEach(function(row){
         if (row && row.updated_at) dates.push(String(row.updated_at));
         if (row && row.created_at) dates.push(String(row.created_at));
       });
@@ -1571,7 +1587,21 @@ OBRAS.services = {
   },
 
   remoteHasData: function(snapshot){
-    return Object.keys(snapshot || {}).some(function(key){ return (snapshot[key] || []).length > 0; });
+    return Object.keys(snapshot || {}).some(function(key){
+      var rows = Array.isArray(snapshot[key]) ? snapshot[key] : [];
+      return rows.length > 0;
+    });
+  },
+
+
+  normalizeRemoteSnapshot: function(snapshot){
+    snapshot = snapshot || {};
+    var keys = ['empresas','clientes','parceiros','obras','repasses','recebimentos','pagamentos_parceiros','despesas','despesas_gerais','movimentos_caixa','despesas_fixas','ignorados_recorrencia'];
+    keys.forEach(function(key){
+      if (!Array.isArray(snapshot[key])) snapshot[key] = [];
+    });
+    snapshot._cloudControl = snapshot._cloudControl || {};
+    return snapshot;
   },
 
   inferSeqOS: function(obras){
@@ -1884,7 +1914,7 @@ OBRAS.services = {
         if (fallback.error) throw fallback.error;
         result = fallback;
       }
-      out[t] = result.data || [];
+      out[t] = Array.isArray(result.data) ? result.data : [];
     }
     out._cloudControl = {
       baseId: OBRAS.state.cloudControl && OBRAS.state.cloudControl.baseId ? OBRAS.state.cloudControl.baseId : '',
@@ -2398,7 +2428,7 @@ OBRAS.services = {
         if (fallback.error) throw fallback.error;
         result = fallback;
       }
-      out[t] = result.data || [];
+      out[t] = Array.isArray(result.data) ? result.data : [];
     }
     out._cloudControl = {
       baseId: OBRAS.state.cloudControl && OBRAS.state.cloudControl.baseId ? OBRAS.state.cloudControl.baseId : '',
