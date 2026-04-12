@@ -113,11 +113,32 @@ OBRAS.financeiroScreen = {
       var contasPagar = filtrados.filter(function(i){
         return i.natureza === 'saida' && i.status !== 'Pago';
       }).slice(0, 8).map(function(i){
-        return '<div class="list-item"><div><strong>' + OBRAS.helpers.escape(i.os) + '</strong><div class="muted">' + OBRAS.helpers.escape(i.descricao) + ' · ' + OBRAS.helpers.escape(i.status) + '</div></div><div><strong>' + OBRAS.helpers.money(i.valor) + '</strong></div></div>';
+        var overdueClass = i.status === 'Atrasado' ? ' overdue-item' : '';
+        var statusClass = i.status === 'Atrasado' ? ' status-overdue' : '';
+        return '<div class="list-item' + overdueClass + '"><div><strong>' + OBRAS.helpers.escape(i.os) + '</strong><div class="muted' + statusClass + '">' + OBRAS.helpers.escape(i.descricao) + ' · ' + OBRAS.helpers.escape(i.status) + '</div></div><div><strong>' + OBRAS.helpers.money(i.valor) + '</strong></div></div>';
       }).join('');
 
-      var movRows = filtrados.slice(0, 18).map(function(i){
-        return '<tr>'
+      var fluxoOrdenado = filtrados.slice().sort(function(a, b){
+        var prioridade = function(item){
+          if (item.natureza === 'saida' && item.status === 'Atrasado') return 0;
+          if (item.natureza === 'saida' && item.status === 'Vence hoje') return 1;
+          if (item.natureza === 'saida' && item.status === 'A vencer') return 2;
+          if (item.status === 'Recebido') return 3;
+          if (item.status === 'Pago') return 4;
+          return 5;
+        };
+        var pa = prioridade(a);
+        var pb = prioridade(b);
+        if (pa !== pb) return pa - pb;
+        if (pa <= 2) {
+          return String(a.data || '').localeCompare(String(b.data || ''));
+        }
+        return String(b.data || '').localeCompare(String(a.data || ''));
+      });
+
+      var movRows = fluxoOrdenado.slice(0, 30).map(function(i){
+        var rowClass = i.status === 'Atrasado' ? ' class="row-overdue"' : '';
+        return '<tr' + rowClass + '>'
           + '<td>' + OBRAS.helpers.escape(i.data ? OBRAS.helpers.formatDate(i.data) : '-') + '</td>'
           + '<td>' + OBRAS.helpers.escape(i.os) + '</td>'
           + '<td>' + OBRAS.helpers.escape(i.tipo) + '</td>'
@@ -133,7 +154,8 @@ OBRAS.financeiroScreen = {
           + '<td>' + OBRAS.helpers.escape(o.numeroOS) + '</td>'
           + '<td>' + OBRAS.helpers.escape(o.nome) + '</td>'
           + '<td>' + OBRAS.helpers.money(o.totalRecebido) + '</td>'
-          + '<td>' + OBRAS.helpers.money(o.saldoParceiro + o.despesasPendentes) + '</td>'
+          + '<td>' + OBRAS.helpers.money(o.despesasPendentes) + '</td>'
+          + '<td>' + OBRAS.helpers.money(o.saldoParceiro) + '</td>'
           + '<td>' + OBRAS.helpers.money(o.resultadoLiquido) + '</td>'
           + '<td><div class="table-actions actions-inline"><button class="small-btn" data-action="open-obra" data-id="' + o.id + '">Abrir</button><button class="small-btn btn-soft" data-action="edit-obra" data-id="' + o.id + '">Editar</button><button class="small-btn btn-danger" data-action="delete-obra" data-id="' + o.id + '">Excluir</button></div></td>'
           + '</tr>';
@@ -189,7 +211,7 @@ OBRAS.financeiroScreen = {
         + '<div class="top-alert">Agora você pode pagar, editar valor e excluir lançamentos direto nesta tela. NF automática pode ser paga e editada, mas não apagada por engano.</div>'
         + (movRows ? '<table class="simple-table"><thead><tr><th>Data</th><th>OS</th><th>Tipo</th><th>Descrição</th><th>Status</th><th>Valor</th><th>Ações</th></tr></thead><tbody>' + movRows + '</tbody></table>' : '<div class="empty-state">Nenhum movimento encontrado.</div>')
         + '</div>'
-        + '<div class="table-card section-space"><h3 class="card-title">Fechamento por obra</h3>' + (obraRows ? '<table class="simple-table"><thead><tr><th>OS</th><th>Obra</th><th>Recebido</th><th>Pendente</th><th>Resultado líquido</th><th>Ações</th></tr></thead><tbody>' + obraRows + '</tbody></table>' : '<div class="empty-state">Nenhuma obra cadastrada.</div>') + '</div>'
+        + '<div class="table-card section-space"><h3 class="card-title">Fechamento por obra</h3>' + (obraRows ? '<table class="simple-table"><thead><tr><th>OS</th><th>Obra</th><th>Recebido</th><th>NF pendente</th><th>Parceiro pendente</th><th>Resultado líquido</th><th>Ações</th></tr></thead><tbody>' + obraRows + '</tbody></table>' : '<div class="empty-state">Nenhuma obra cadastrada.</div>') + '</div>'
       );
 
       var filtroObra = document.getElementById('fin-filtro-obra');

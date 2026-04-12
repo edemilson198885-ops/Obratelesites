@@ -71,6 +71,7 @@ OBRAS.events = {
 
       if (e.target.id === 'backup-export-btn') { OBRAS.services.downloadBackup(); return; }
       if (e.target.id === 'backup-import-btn') { OBRAS.services.openImportDialog(); return; }
+      if (e.target.id === 'recalc-auto-nf-btn') { OBRAS.services.recalculateAutoNfExpenses(); return; }
       if (e.target.id === 'relatorio-export-btn') { OBRAS.services.exportRelatorioTXT(); return; }
       if (e.target.id === 'cloud-force-upload-btn') { OBRAS.services.forceCloudUpload(); return; }
       if (e.target.id === 'cloud-force-download-btn') { OBRAS.services.forceCloudDownload(); return; }

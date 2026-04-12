@@ -14,6 +14,7 @@ OBRAS.configuracoesScreen = {
       + '    <div class="form-actions ops-actions">'
       + '      <button class="btn btn-primary" id="backup-export-btn">Exportar backup</button>'
       + '      <button class="btn" id="backup-import-btn">Importar backup</button>'
+      + '      <button class="btn" id="recalc-auto-nf-btn">Recalcular impostos</button>'
       + '      <input type="file" id="backup-import-input" accept="application/json" style="display:none" />'
       + '    </div>'
       + '  </div>'

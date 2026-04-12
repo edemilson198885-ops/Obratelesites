@@ -7,10 +7,6 @@
   <meta name="theme-color" content="#0f172a" />
   <title>Controle de Obras TELESITES</title>
   <link rel="icon" type="image/png" href="./assets/img/logo-telesites.png" />
-  <link rel="manifest" href="./manifest.json" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <link rel="stylesheet" href="./assets/css/app.css?v=9.7.0" />
 </head>
 <body>
@@ -44,15 +40,5 @@
   <script src="./assets/js/screens/obra-detalhe.screen.js?v=9.7.0"></script>
   <script src="./assets/js/screens/relatorios.screen.js?v=9.7.0"></script>
   <script src="./assets/js/app.js?v=9.7.0"></script>
-
-  <script>
-    if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
-      window.addEventListener('load', function(){
-        navigator.serviceWorker.register('./service-worker.js', { scope: './' }).catch(function(err){
-          console.warn('Falha ao registrar service worker', err);
-        });
-      });
-    }
-  </script>
 </body>
 </html>

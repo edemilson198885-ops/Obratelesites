@@ -2884,6 +2884,30 @@ OBRAS.services = {
     return String(y) + '-' + String(m).padStart(2,'0') + '-20';
   },
 
+  calculateFiscalNfDueDate: function(baseDate){
+    var raw = String(baseDate || OBRAS.helpers.todayISO()).slice(0, 10);
+    var parts = raw.split('-');
+    var y = Number(parts[0] || new Date().getFullYear());
+    var m = Number(parts[1] || (new Date().getMonth() + 1));
+    var day = Number(parts[2] || new Date().getDate());
+
+    // Regra fiscal TELESITES:
+    // emissões do dia 21 de um mês até o dia 20 do mês seguinte vencem no dia 20.
+    // Na prática:
+    // - dia 01 a 20 -> vence dia 20 do próprio mês
+    // - dia 21 a 31 -> vence dia 20 do mês seguinte
+    var dueMonth = m;
+    var dueYear = y;
+    if (day >= 21) {
+      dueMonth += 1;
+      if (dueMonth > 12) {
+        dueMonth = 1;
+        dueYear += 1;
+      }
+    }
+    return String(dueYear) + '-' + String(dueMonth).padStart(2, '0') + '-20';
+  },
+
   ensureAutoNfExpenseForObra: function(obra){
     OBRAS.state.despesas = Array.isArray(OBRAS.state.despesas) ? OBRAS.state.despesas : [];
     if (!obra || !obra.numeroOS) return;
@@ -2899,7 +2923,7 @@ OBRAS.services = {
 
     var valor = Number(obra.valorObra || 0) * 0.06;
     var competencia = String(obra.dataAbertura || OBRAS.helpers.todayISO()).slice(0, 7);
-    var vencimento = competencia ? (competencia + '-20') : OBRAS.helpers.todayISO();
+    var vencimento = OBRAS.services.calculateFiscalNfDueDate(obra.dataAbertura || OBRAS.helpers.todayISO());
 
     var payload = {
       id: 'desp_nf_' + String(obra.id || obra.numeroOS).replace(/[^a-zA-Z0-9_-]/g, '_'),
@@ -3151,3 +3175,191 @@ OBRAS.services = {
   },
 
 };
+
+
+// Patch v4.1: recalcular NF automática com base no valor recebido, sem alterar schema.
+(function(){
+  if (!window.OBRAS || !OBRAS.services) return;
+
+  OBRAS.services.isLegacyAutoNfExpense = function(item){
+    if (!item) return false;
+    var tipo = String(item.tipoDespesa || item.tipo_despesa || '').toLowerCase();
+    var obs = String(item.observacoes || item.obsOutrasDespesas || item.descricao || '').toLowerCase();
+    return tipo === 'imposto nf' && (
+      obs.indexOf('nf automática gerada pela obra') >= 0
+      || obs.indexOf('nf automatica gerada pela obra') >= 0
+      || obs.indexOf('nf automática') >= 0
+      || obs.indexOf('nf automatica') >= 0
+    );
+  };
+
+  OBRAS.services.isAutoNfExpense = function(item){
+    return !!item && (
+      item.origemLancamento === 'automatico_obra_nf'
+      || item.geradaAutomaticamente === true
+      || item.id === ('desp_nf_' + String(item.os || '').replace(/[^a-zA-Z0-9_-]/g, '_'))
+      || OBRAS.services.isLegacyAutoNfExpense(item)
+    );
+  };
+
+  OBRAS.services.getRecebidoTotalByOS = function(os){
+    return (OBRAS.state.recebimentos || []).reduce(function(total, item){
+      return String(item.os || '') === String(os || '') ? total + Number(item.valor || 0) : total;
+    }, 0);
+  };
+
+  OBRAS.services.rebuildAutoNfExpenseForObra = function(obra){
+    OBRAS.state.despesas = Array.isArray(OBRAS.state.despesas) ? OBRAS.state.despesas : [];
+    if (!obra || !obra.numeroOS) return null;
+
+    var os = String(obra.numeroOS || '');
+    var recebido = Number(this.getRecebidoTotalByOS(os) || 0);
+    var existingIndexes = [];
+    OBRAS.state.despesas.forEach(function(d, idx){
+      if (OBRAS.services.isAutoNfExpense(d) && String(d.os || '') === os) existingIndexes.push(idx);
+    });
+    var existingIndex = existingIndexes.length ? existingIndexes[0] : -1;
+
+    if (existingIndexes.length > 1) {
+      OBRAS.state.despesas = OBRAS.state.despesas.filter(function(item, idx){
+        return !(String(item.os || '') === os && OBRAS.services.isAutoNfExpense(item) && existingIndexes.indexOf(idx) > 0);
+      });
+      existingIndex = OBRAS.state.despesas.findIndex(function(d){
+        return OBRAS.services.isAutoNfExpense(d) && String(d.os || '') === os;
+      });
+    }
+
+    if (recebido <= 0) {
+      OBRAS.state.despesas = OBRAS.state.despesas.filter(function(item){
+        return !(String(item.os || '') === os && OBRAS.services.isAutoNfExpense(item));
+      });
+      return null;
+    }
+
+    var referencia = (OBRAS.state.recebimentos || []).filter(function(r){
+      return String(r.os || '') === os;
+    }).sort(function(a, b){
+      return String(b.dataRecebimento || b.data || '').localeCompare(String(a.dataRecebimento || a.data || ''));
+    })[0] || {};
+
+    var dataBase = referencia.dataRecebimento || referencia.data || obra.dataAbertura || OBRAS.helpers.todayISO();
+    var competencia = String(dataBase || OBRAS.helpers.todayISO()).slice(0, 7);
+    var payload = {
+      id: 'desp_nf_' + String(obra.id || os).replace(/[^a-zA-Z0-9_-]/g, '_'),
+      os: os,
+      competencia: competencia,
+      dataDespesa: dataBase,
+      tipoDespesa: 'Imposto NF',
+      dataVencimento: OBRAS.services.calculateFiscalNfDueDate(dataBase),
+      dataPagamentoReal: '',
+      valor: Number((recebido * 0.06).toFixed(2)),
+      origemCusto: 'Caixa da Empresa',
+      obsOutrasDespesas: '',
+      observacoes: 'NF automática calculada sobre o valor recebido',
+      geradaAutomaticamente: true,
+      origemLancamento: 'automatico_obra_nf',
+      createdAt: existingIndex >= 0 && OBRAS.state.despesas[existingIndex].createdAt ? OBRAS.state.despesas[existingIndex].createdAt : new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    if (existingIndex >= 0) {
+      var atual = OBRAS.state.despesas[existingIndex] || {};
+      payload.dataPagamentoReal = atual.dataPagamentoReal || '';
+      OBRAS.state.despesas[existingIndex] = Object.assign({}, atual, payload);
+      return OBRAS.state.despesas[existingIndex];
+    }
+
+    OBRAS.state.despesas.push(payload);
+    return payload;
+  };
+
+  OBRAS.services.syncAutoNfExpenses = function(){
+    OBRAS.state.despesas = Array.isArray(OBRAS.state.despesas) ? OBRAS.state.despesas : [];
+    var obras = Array.isArray(OBRAS.state.obras) ? OBRAS.state.obras : [];
+    var validOS = {};
+    obras.forEach(function(obra){
+      validOS[String(obra.numeroOS || '')] = true;
+      OBRAS.services.rebuildAutoNfExpenseForObra(obra);
+    });
+    OBRAS.state.despesas = OBRAS.state.despesas.filter(function(item){
+      if (!OBRAS.services.isAutoNfExpense(item)) return true;
+      return !!validOS[String(item.os || '')];
+    });
+  };
+
+  OBRAS.services.recalculateAutoNfExpenses = function(){
+    if (!window.confirm('Recalcular todos os impostos NF automáticos com base no valor recebido?')) return;
+    OBRAS.state.despesas = (OBRAS.state.despesas || []).filter(function(item){
+      return !OBRAS.services.isAutoNfExpense(item);
+    });
+    this.syncAutoNfExpenses();
+    OBRAS.stateApi.save();
+    OBRAS.app.render();
+    OBRAS.ui.toast('Impostos NF recalculados e travados.');
+  };
+
+  var wrapAfter = function(name, shouldSync){
+    var original = OBRAS.services[name];
+    if (typeof original !== 'function') return;
+    OBRAS.services[name] = function(){
+      var out = original.apply(this, arguments);
+      try {
+        if (!shouldSync || shouldSync.apply(this, arguments) !== false) {
+          OBRAS.services.syncAutoNfExpenses();
+          OBRAS.stateApi.save();
+          if (OBRAS.app && typeof OBRAS.app.render === 'function') OBRAS.app.render();
+        }
+      } catch (err) {
+        console.error('Erro ao sincronizar NF automática:', err);
+      }
+      return out;
+    };
+  };
+
+  wrapAfter('submitRecebimento');
+  wrapAfter('submitObraRecebimento');
+  wrapAfter('deleteObra', function(){ return true; });
+  wrapAfter('deleteFinanceEntry', function(kind){ return kind === 'recebimentos' || kind === 'despesas'; });
+  wrapAfter('editFinanceEntry', function(kind){ return kind === 'recebimentos'; });
+  wrapAfter('payFinanceEntry', function(kind){ return kind === 'recebimentos'; });
+  wrapAfter('deleteObraLancamento', function(kind){ return kind === 'rec'; });
+
+  var originalDeleteFinanceEntry = OBRAS.services.deleteFinanceEntry;
+  if (typeof originalDeleteFinanceEntry === 'function') {
+    OBRAS.services.deleteFinanceEntry = function(kind, id){
+      if (kind === 'despesas') {
+        var item = OBRAS.services.getFinanceEntryById(kind, id);
+        if (OBRAS.services.isAutoNfExpense(item)) {
+          OBRAS.ui.toast('Imposto NF automático é travado. Altere os recebimentos e recalcule os impostos.');
+          return;
+        }
+      }
+      return originalDeleteFinanceEntry.apply(this, arguments);
+    };
+  }
+
+  var originalEditFinanceEntry = OBRAS.services.editFinanceEntry;
+  if (typeof originalEditFinanceEntry === 'function') {
+    OBRAS.services.editFinanceEntry = function(kind, id){
+      if (kind === 'despesas') {
+        var item = OBRAS.services.getFinanceEntryById(kind, id);
+        if (OBRAS.services.isAutoNfExpense(item)) {
+          OBRAS.ui.toast('Imposto NF automático é travado. Corrija o recebimento da OS para atualizar o imposto.');
+          return;
+        }
+      }
+      return originalEditFinanceEntry.apply(this, arguments);
+    };
+  }
+
+  var originalUpdate = OBRAS.services.updateObraLancamento;
+  if (typeof originalUpdate === 'function') {
+    OBRAS.services.updateObraLancamento = function(kind){
+      var out = originalUpdate.apply(this, arguments);
+      if (kind === 'rec') {
+        OBRAS.services.syncAutoNfExpenses();
+      }
+      return out;
+    };
+  }
+})();
