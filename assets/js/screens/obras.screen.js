@@ -27,7 +27,7 @@ OBRAS.obrasScreen = {
     var cidades = Array.from(new Set(metrics.map(function(o){ return o.cidade; }).concat((OBRAS.state.obras || []).map(function(o){ return o.cidade; })).filter(Boolean))).sort();
     var parceiros = Array.from(new Set(metrics.map(function(o){ return o.parceiroNome; }).concat(parceirosLista).filter(function(v){ return v && v !== '-'; }))).sort();
     var clientes = Array.from(new Set(metrics.map(function(o){ return o.clienteNome; }).concat(clientesLista).filter(function(v){ return v && v !== '-'; }))).sort();
-    var osList = this.sortByOS(Array.from(new Set(metrics.map(function(o){ return o.numeroOS; }).filter(Boolean))).map(function(numeroOS){ return { numeroOS: numeroOS }; })).map(function(item){ return item.numeroOS; });
+    var osList = Array.from(new Set(metrics.map(function(o){ return o.numeroOS; }).filter(Boolean))).sort();
 
     var self = this;
     var filtered = metrics.filter(function(obra){
@@ -39,7 +39,6 @@ OBRAS.obrasScreen = {
       var okCliente = self.matchValue(obra.clienteNome, filtros.cliente);
       return okQuery && okStatus && okCidade && okParceiro && okCliente;
     });
-    filtered = this.sortByOS(filtered);
 
     var countExec = metrics.filter(function(x){ return self.norm(x.statusObra) === self.norm('Em execução') || self.norm(x.statusObra) === self.norm('Em andamento'); }).length;
     var countPlanej = metrics.filter(function(x){ return self.norm(x.statusObra) === self.norm('Planejado') || self.norm(x.statusObra) === self.norm('Planejamento'); }).length;

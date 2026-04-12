@@ -1,25 +1,5 @@
 window.OBRAS = window.OBRAS || {};
 OBRAS.dashboardScreen = {
-  norm: function(value){
-    return String(value || '')
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .trim()
-      .toLowerCase();
-  },
-
-  osOrder: function(value){
-    var match = String(value || '').match(/(\d+)/g);
-    return match && match.length ? Number(match[match.length - 1]) : Number.MAX_SAFE_INTEGER;
-  },
-
-  destaqueRank: function(obra){
-    var status = this.norm(obra && obra.statusObra);
-    if (status === 'em execucao' || status === 'em andamento') return 0;
-    if (status === 'planejado' || status === 'planejamento') return 1;
-    if (status === 'concluida') return 2;
-    return 3;
-  },
   donutSVG: function(values){
     var total = values.reduce(function(s, v){ return s + (Number(v) || 0); }, 0);
     if (!total) return '<div class="mini-chart-empty">Sem dados suficientes para o gráfico.</div>';
@@ -61,15 +41,7 @@ OBRAS.dashboardScreen = {
       var m = OBRAS.rules.painelMetrics(db);
       var avisos = OBRAS.rules.avisos(db, m);
 
-      var obrasDestaque = m.obras.slice().sort(function(a, b){
-        var rank = OBRAS.dashboardScreen.destaqueRank(a) - OBRAS.dashboardScreen.destaqueRank(b);
-        if (rank !== 0) return rank;
-        var osDiff = OBRAS.dashboardScreen.osOrder(a && a.numeroOS) - OBRAS.dashboardScreen.osOrder(b && b.numeroOS);
-        if (osDiff !== 0) return osDiff;
-        return String(a && a.numeroOS || '').localeCompare(String(b && b.numeroOS || ''), 'pt-BR', { numeric: true, sensitivity: 'base' });
-      });
-
-      var rows = obrasDestaque.slice(0, 5).map(function(obra){
+      var rows = m.obras.slice(0, 5).map(function(obra){
         return '<tr class="click-row" data-action="open-obra" data-id="' + obra.id + '">'
           + '<td>' + OBRAS.helpers.escape(obra.numeroOS) + '</td>'
           + '<td>' + OBRAS.helpers.escape(obra.nome) + '</td>'
