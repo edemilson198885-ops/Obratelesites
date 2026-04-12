@@ -45,5 +45,22 @@ OBRAS.ui = {
     var imported = OBRAS.state.meta && OBRAS.state.meta.importedFromLegacy;
     this.setHTML('topbar', '      <div class="panel topbar">        <div class="topbar-left">          <img class="topbar-logo" src="./assets/img/logo-telesites.png" alt="Logo" />          <div>            <div class="topbar-title">Controle de Obras</div>            <div class="topbar-sub">TELESITES · Fase 2 local com banco ativo · ' + OBRAS.helpers.todayLabel() + (imported ? ' · dados legados importados' : '') + '</div>          </div>        </div>        <div class="topbar-right">          <div class="pill"><span class="pill-dot"></span>Modo local ativo</div>          <div class="pill">Usuário: ' + OBRAS.helpers.escape(OBRAS.state.session.userName || 'Local') + '</div>          <button class="btn btn-soft" id="logout-btn">Sair</button>        </div>      </div>    ');
   },
-  renderBottomNav: function(){ this.setHTML('bottom-nav', ''); }
+  renderBottomNav: function(){
+    if (!OBRAS.state.session.loggedIn) {
+      this.setHTML('bottom-nav', '');
+      return;
+    }
+    var items = [
+      { key:'dashboard', title:'Início' },
+      { key:'obras', title:'Obras' },
+      { key:'financeiro', title:'Financeiro' },
+      { key:'cadastros', title:'Base' },
+      { key:'configuracoes', title:'Ajustes' }
+    ];
+    var html = '<div class="mobile-bottom-nav panel">' + items.map(function(item){
+      var active = OBRAS.state.currentScreen === item.key ? 'active' : '';
+      return '<button class="mobile-nav-btn ' + active + '" data-go="' + item.key + '"><span class="mobile-nav-icon">' + OBRAS.ui.icon(item.key) + '</span><span class="mobile-nav-label">' + item.title + '</span></button>';
+    }).join('') + '</div>';
+    this.setHTML('bottom-nav', html);
+  }
 };
