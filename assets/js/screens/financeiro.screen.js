@@ -76,8 +76,9 @@ OBRAS.financeiroScreen = {
   },
 
   actionButtons: function(item){
+    var editLabel = item.autoNf ? 'Abrir OS' : 'Editar';
     var html = '<div class="table-actions actions-inline">'
-      + '<button class="small-btn btn-soft" data-action="edit-finance-entry" data-kind="' + item.sourceKey + '" data-id="' + item.entryId + '">Editar</button>';
+      + '<button class="small-btn btn-soft" data-action="edit-finance-entry" data-kind="' + item.sourceKey + '" data-id="' + item.entryId + '" data-os="' + OBRAS.helpers.escape(item.os || '') + '">' + editLabel + '</button>';
     if (item.canPay) {
       html += '<button class="small-btn btn-primary-lite" data-action="pay-finance-entry" data-kind="' + item.sourceKey + '" data-id="' + item.entryId + '">Pagar</button>';
     }
@@ -190,7 +191,7 @@ OBRAS.financeiroScreen = {
         + '      <div class="field"><label>Tipo</label><input id="geral-tipo" placeholder="Ex: Ferramental" /></div>'
         + '      <div class="field"><label>Valor</label><input id="geral-valor" type="number" step="0.01" /></div>'
         + '      <div class="field"><label>Vencimento</label><input id="geral-vencimento" type="date" value="' + OBRAS.helpers.todayISO() + '" /></div>'
-        + '      <div class="field"><label>Marcar como paga</label><div style="padding-top:11px"><input id="geral-paga" type="checkbox" /></div></div>'
+        + '      <div class="field checkbox-field"><label>Marcar como paga</label><label class="checkbox-box" for="geral-paga"><input id="geral-paga" type="checkbox" /><span>Pagamento realizado</span></label></div>'
         + '      <div class="field" style="grid-column:1/-1"><label>Observações</label><textarea id="geral-obs"></textarea></div>'
         + '    </div>'
         + '    <div class="form-actions"><button class="btn" id="geral-submit-btn">Salvar despesa geral</button></div>'
@@ -209,9 +210,9 @@ OBRAS.financeiroScreen = {
         + '</div>'
         + '<div class="table-card section-space"><h3 class="card-title">Fluxo financeiro</h3>'
         + '<div class="top-alert">Agora você pode pagar, editar valor e excluir lançamentos direto nesta tela. NF automática pode ser paga e editada, mas não apagada por engano.</div>'
-        + (movRows ? '<table class="simple-table"><thead><tr><th>Data</th><th>OS</th><th>Tipo</th><th>Descrição</th><th>Status</th><th>Valor</th><th>Ações</th></tr></thead><tbody>' + movRows + '</tbody></table>' : '<div class="empty-state">Nenhum movimento encontrado.</div>')
+        + (movRows ? '<div class="table-scroll flow-table-window"><table class="simple-table"><thead><tr><th>Data</th><th>OS</th><th>Tipo</th><th>Descrição</th><th>Status</th><th>Valor</th><th>Ações</th></tr></thead><tbody>' + movRows + '</tbody></table></div>' : '<div class="empty-state">Nenhum movimento encontrado.</div>')
         + '</div>'
-        + '<div class="table-card section-space"><h3 class="card-title">Fechamento por obra</h3>' + (obraRows ? '<table class="simple-table"><thead><tr><th>OS</th><th>Obra</th><th>Recebido</th><th>NF pendente</th><th>Parceiro pendente</th><th>Resultado líquido</th><th>Ações</th></tr></thead><tbody>' + obraRows + '</tbody></table>' : '<div class="empty-state">Nenhuma obra cadastrada.</div>') + '</div>'
+        + '<div class="table-card section-space"><h3 class="card-title">Fechamento por obra</h3>' + (obraRows ? '<div class="table-scroll obra-table-window"><table class="simple-table"><thead><tr><th>OS</th><th>Obra</th><th>Recebido</th><th>NF pendente</th><th>Parceiro pendente</th><th>Resultado líquido</th><th>Ações</th></tr></thead><tbody>' + obraRows + '</tbody></table></div>' : '<div class="empty-state">Nenhuma obra cadastrada.</div>') + '</div>'
       );
 
       var filtroObra = document.getElementById('fin-filtro-obra');

@@ -67,7 +67,7 @@ OBRAS.obraDetalheScreen = {
       + '</div>'
       + '<div class="content-grid section-space">'
       + '  <div class="table-card"><h3 class="card-title">Despesas da obra</h3>'
-      + '    <div class="inline-form"><input id="det-desp-valor" placeholder="Valor" /><input id="det-desp-data" type="date" value="' + OBRAS.helpers.todayISO() + '" /><select id="det-desp-tipo"><option value="obra">Despesa obra</option><option value="mobilizacao">Mobilização</option><option value="material">Material</option><option value="viagem">Viagem</option><option value="Imposto NF">Imposto NF</option></select><input id="det-desp-obs" placeholder="Observação" /><button class="btn btn-primary" id="det-desp-btn">' + (edit.kind === 'desp' ? 'Salvar edição' : 'Lançar') + '</button></div>'
+      + '    <div class="inline-form"><input id="det-desp-valor" placeholder="Valor" /><input id="det-desp-data" type="date" value="' + OBRAS.helpers.todayISO() + '" /><select id="det-desp-tipo"><option value="obra">Despesa obra</option><option value="mobilizacao">Mobilização</option><option value="material">Material</option><option value="viagem">Viagem</option><option value="Imposto NF">Imposto NF</option></select><input id="det-desp-obs" placeholder="Observação" /><label class="inline-check"><input id="det-desp-pago" type="checkbox" checked /> Pago</label><button class="btn btn-primary" id="det-desp-btn">' + (edit.kind === 'desp' ? 'Salvar edição' : 'Lançar') + '</button></div>'
       +       OBRAS.obraDetalheScreen.listRows(despesas, 'Nenhuma despesa lançada para esta obra.', 'desp')
       + '  </div>'
       + '  <div class="list-card"><h3 class="card-title">Resumo operacional</h3>'
@@ -80,6 +80,9 @@ OBRAS.obraDetalheScreen = {
       + '</div>';
 
     OBRAS.ui.setHTML('screen-container', html);
+
+    var despPagoDefault = document.getElementById('det-desp-pago');
+    if (despPagoDefault && !(edit && edit.kind === 'desp')) despPagoDefault.checked = true;
 
     var collections = { rec: recebimentos, pag: pagamentos, desp: despesas };
     if (edit.kind && collections[edit.kind]) {
@@ -96,7 +99,9 @@ OBRAS.obraDetalheScreen = {
         if (obsEl) obsEl.value = obs;
         if (edit.kind === 'desp') {
           var tipoEl = document.getElementById('det-desp-tipo');
+          var pagoEl = document.getElementById('det-desp-pago');
           if (tipoEl) tipoEl.value = item.tipoDespesa || item.tipo || 'obra';
+          if (pagoEl) pagoEl.checked = !!(item.dataPagamentoReal || item.status === 'pago');
         }
       }
     }

@@ -193,6 +193,9 @@ OBRAS.services = {
     OBRAS.state.ui.selectedObraId = id;
     OBRAS.stateApi.save();
     OBRAS.router.goTo(OBRAS.config.SCREENS.OBRA_DETALHE);
+    window.setTimeout(function(){
+      try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); }
+    }, 60);
   },
 
   getSelectedObra: function(){
@@ -279,12 +282,14 @@ OBRAS.services = {
     var data = document.getElementById('det-desp-data').value || OBRAS.helpers.todayISO();
     var tipo = document.getElementById('det-desp-tipo').value || 'obra';
     var obs = document.getElementById('det-desp-obs').value.trim();
+    var pagoEl = document.getElementById('det-desp-pago');
+    var pago = !!(pagoEl && pagoEl.checked);
     if (!valor) { OBRAS.ui.toast('Informe o valor da despesa.'); return; }
     var edit = OBRAS.state.form && OBRAS.state.form.obraLancamentoEdit;
     if (edit && edit.kind === 'desp') {
       var desp = (OBRAS.state.despesas || []).find(function(x){ return x.id === edit.id; });
       if (!desp) { OBRAS.ui.toast('Despesa não encontrada.'); return; }
-      OBRAS.services.updateObraLancamento('desp', desp, valor, data, obs, tipo);
+      OBRAS.services.updateObraLancamento('desp', desp, valor, data, obs, tipo, pago);
       delete OBRAS.state.form.obraLancamentoEdit;
       OBRAS.stateApi.save();
       OBRAS.app.render();
@@ -299,12 +304,12 @@ OBRAS.services = {
       data: data,
       dataDespesa: data,
       dataVencimento: data,
-      dataPagamentoReal: data,
+      dataPagamentoReal: pago ? data : '',
       tipo: tipo,
       tipoDespesa: tipo,
       observacao: obs,
       observacoes: obs,
-      status: 'pago'
+      status: pago ? 'pago' : 'pendente'
     });
     OBRAS.stateApi.save();
     OBRAS.app.render();
@@ -438,6 +443,8 @@ OBRAS.services = {
     if (idx >= 0) OBRAS.state.obras[idx] = payload;
     else OBRAS.state.obras.push(payload);
     OBRAS.services.syncAutoNfExpenses();
+    OBRAS.state.ui = OBRAS.state.ui || {};
+    OBRAS.state.ui.obrasReturnFocusId = payload.id;
     OBRAS.state.form = {};
     OBRAS.stateApi.save();
     OBRAS.router.goTo(OBRAS.config.SCREENS.OBRAS);
@@ -446,6 +453,8 @@ OBRAS.services = {
   editObra: function(id){
     var obra = OBRAS.state.obras.find(function(x){ return x.id === id; });
     if (!obra) return;
+    OBRAS.state.ui = OBRAS.state.ui || {};
+    OBRAS.state.ui.obrasReturnFocusId = id;
     OBRAS.state.form = {
       obra: {
         id: obra.id,
@@ -1303,12 +1312,14 @@ OBRAS.services = {
     var data = document.getElementById('det-desp-data').value || OBRAS.helpers.todayISO();
     var tipo = document.getElementById('det-desp-tipo').value || 'obra';
     var obs = document.getElementById('det-desp-obs').value.trim();
+    var pagoEl = document.getElementById('det-desp-pago');
+    var pago = !!(pagoEl && pagoEl.checked);
     if (!valor) { OBRAS.ui.toast('Informe o valor da despesa.'); return; }
     var edit = OBRAS.state.form && OBRAS.state.form.obraLancamentoEdit;
     if (edit && edit.kind === 'desp') {
       var desp = (OBRAS.state.despesas || []).find(function(x){ return x.id === edit.id; });
       if (!desp) { OBRAS.ui.toast('Despesa não encontrada.'); return; }
-      OBRAS.services.updateObraLancamento('desp', desp, valor, data, obs, tipo);
+      OBRAS.services.updateObraLancamento('desp', desp, valor, data, obs, tipo, pago);
       delete OBRAS.state.form.obraLancamentoEdit;
       OBRAS.stateApi.save();
       OBRAS.app.render();
@@ -1323,12 +1334,12 @@ OBRAS.services = {
       data: data,
       dataDespesa: data,
       dataVencimento: data,
-      dataPagamentoReal: data,
+      dataPagamentoReal: pago ? data : '',
       tipo: tipo,
       tipoDespesa: tipo,
       observacao: obs,
       observacoes: obs,
-      status: 'pago'
+      status: pago ? 'pago' : 'pendente'
     });
     OBRAS.stateApi.save();
     OBRAS.app.render();
@@ -2985,7 +2996,7 @@ OBRAS.services = {
     OBRAS.ui.toast('Editando ' + cfg.label.toLowerCase() + '.');
   },
 
-  updateObraLancamento: function(kind, item, valor, data, obs, tipo){
+  updateObraLancamento: function(kind, item, valor, data, obs, tipo, pago){
     item.valor = valor;
     item.data = data;
     item.observacao = obs;
@@ -2999,12 +3010,13 @@ OBRAS.services = {
       item.dataPagamentoReal = data;
       item.status = 'pago';
     } else if (kind === 'desp') {
+      var pagoDesp = typeof pago === 'boolean' ? pago : true;
       item.dataDespesa = data;
       item.dataVencimento = data;
-      item.dataPagamentoReal = data;
+      item.dataPagamentoReal = pagoDesp ? data : '';
       item.tipo = tipo || item.tipo || 'obra';
       item.tipoDespesa = tipo || item.tipoDespesa || 'obra';
-      item.status = 'pago';
+      item.status = pagoDesp ? 'pago' : 'pendente';
     }
   },
 
@@ -3344,7 +3356,16 @@ OBRAS.services = {
       if (kind === 'despesas') {
         var item = OBRAS.services.getFinanceEntryById(kind, id);
         if (OBRAS.services.isAutoNfExpense(item)) {
-          OBRAS.ui.toast('Imposto NF automático é travado. Corrija o recebimento da OS para atualizar o imposto.');
+          var os = String(item.os || '');
+          var obra = (OBRAS.state.obras || []).find(function(x){
+            return String(x.numeroOS || '') === os || String(x.id || '') === String(item.obraId || '');
+          });
+          if (!obra) {
+            OBRAS.ui.toast('OS vinculada ao imposto automático não encontrada.');
+            return;
+          }
+          OBRAS.ui.toast('Abrindo a OS vinculada para edição.');
+          OBRAS.services.openObraDetail(obra.id);
           return;
         }
       }

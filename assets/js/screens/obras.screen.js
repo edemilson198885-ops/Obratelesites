@@ -30,6 +30,34 @@ OBRAS.obrasScreen = {
     });
   },
 
+
+  scrollEditorIntoView: function(){
+    window.setTimeout(function(){
+      var editor = document.getElementById('obra-editor-card');
+      if (!editor) return;
+      editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      var firstInput = document.getElementById('obra-numero-os') || document.getElementById('obra-nome');
+      if (firstInput && firstInput.focus) firstInput.focus();
+    }, 60);
+  },
+
+  restoreRowFocus: function(){
+    var ui = OBRAS.state.ui || {};
+    var rowId = ui.obrasReturnFocusId;
+    if (!rowId || (OBRAS.state.form && OBRAS.state.form.obra && OBRAS.state.form.obra.id)) return;
+    window.setTimeout(function(){
+      var row = document.querySelector('[data-obra-row-id="' + rowId + '"]');
+      if (!row) return;
+      row.classList.add('row-focus-highlight');
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      window.setTimeout(function(){ row.classList.remove('row-focus-highlight'); }, 2200);
+      if (OBRAS.state.ui) {
+        delete OBRAS.state.ui.obrasReturnFocusId;
+        OBRAS.stateApi.save();
+      }
+    }, 80);
+  },
+
   renderForm: function(){
     var current = OBRAS.state.form && OBRAS.state.form.obra ? OBRAS.state.form.obra : {};
     var metrics = OBRAS.state.obras.map(function(o){ return OBRAS.rules.obraMetrics(o, OBRAS.state); });
@@ -64,7 +92,7 @@ OBRAS.obrasScreen = {
     var totalAberto = filtered.reduce(function(s,x){ return s + Number(x.saldoReceber || 0); }, 0);
 
     var rows = filtered.map(function(obra){
-      return '<tr>'
+      return '<tr data-obra-row-id="' + obra.id + '">'
         + '<td>' + OBRAS.helpers.escape(obra.numeroOS) + '</td>'
         + '<td><strong>' + OBRAS.helpers.escape(obra.nome) + '</strong><div class="muted">' + OBRAS.helpers.escape(obra.cidade) + ' · ' + OBRAS.helpers.escape(obra.parceiroNome || '-') + (obra.clienteNome ? ' · ' + OBRAS.helpers.escape(obra.clienteNome) : '') + '</div></td>'
         + '<td>' + OBRAS.ui.badge(obra.etapa || '-', 'info') + '</td>'
@@ -101,7 +129,7 @@ OBRAS.obrasScreen = {
       + '  <div class="form-actions align-end"><button class="btn" id="obra-filtro-clear-btn">Limpar filtros</button></div>'
       + '</div>'
       + '<div class="split-card">'
-      + '  <div class="form-card">'
+      + '  <div class="form-card" id="obra-editor-card">'
       + '    <h3 class="card-title">' + (current.id ? 'Editar obra' : 'Nova obra') + '</h3>'
       + '    <form id="obra-form" data-edit-id="' + (current.id || '') + '" onsubmit="return false;">'
       + '      <div class="field-grid">'
@@ -128,9 +156,12 @@ OBRAS.obrasScreen = {
       + '</div>'
       + '<div class="table-card section-space">'
       + '  <h3 class="card-title">Lista de obras</h3>'
-      +     (rows ? '<table class="simple-table"><thead><tr><th>OS</th><th>Obra</th><th>Etapa</th><th>Status</th><th>Valor</th><th>A receber</th><th>Ações</th></tr></thead><tbody>' + rows + '</tbody></table>' : '<div class="empty-state">Nenhuma obra encontrada com os filtros atuais.</div>')
+      +     (rows ? '<div class="table-scroll obras-table-window"><table class="simple-table"><thead><tr><th>OS</th><th>Obra</th><th>Etapa</th><th>Status</th><th>Valor</th><th>A receber</th><th>Ações</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<div class="empty-state">Nenhuma obra encontrada com os filtros atuais.</div>')
       + '</div>'
     );
+
+    if (current.id) this.scrollEditorIntoView();
+    else this.restoreRowFocus();
   },
 
   render: function(){

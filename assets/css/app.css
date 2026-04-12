@@ -565,6 +565,20 @@ textarea{
 .table-card,.list-card,.form-card,.panel{overflow:hidden}
 .table-scroll{width:100%;overflow:auto;-webkit-overflow-scrolling:touch}
 .table-card .simple-table,.list-card .simple-table,.panel .simple-table{min-width:720px}
+
+
+.flow-table-window{
+  max-height: 560px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.flow-table-window .simple-table thead th{
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 2;
+}
 @media (max-width: 860px){
   body{padding-bottom:86px}
   #sidebar{display:none}
@@ -626,4 +640,134 @@ textarea{
 
 .simple-table .row-overdue:hover{
   background: #fff1f1;
+}
+
+
+/* Padronização visual dos formulários sem alterar estrutura/lógica */
+.field input,
+.field select,
+.field textarea,
+.inline-form input,
+.inline-form select,
+.inline-form textarea{
+  width:100%;
+  min-height:46px;
+  padding:12px 14px;
+  border:1px solid #dbe4f0;
+  border-radius:16px;
+  background:#fff;
+  color:var(--text);
+  transition:border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+  outline:none;
+}
+.field textarea,
+.inline-form textarea{
+  min-height:92px;
+}
+.field input::placeholder,
+.field textarea::placeholder{
+  color:#7f8da8;
+}
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+.inline-form input:focus,
+.inline-form select:focus,
+.inline-form textarea:focus{
+  border-color:#8fb1ff;
+  box-shadow:0 0 0 4px rgba(46,102,240,.10);
+}
+.field input:disabled,
+.field select:disabled,
+.field textarea:disabled{
+  background:#f5f7fb;
+  color:#6b7280;
+  cursor:not-allowed;
+}
+.checkbox-field{
+  justify-content:flex-end;
+}
+.checkbox-box{
+  min-height:46px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px 14px;
+  border:1px solid #dbe4f0;
+  border-radius:16px;
+  background:#fff;
+}
+.checkbox-box input[type="checkbox"]{
+  width:18px;
+  height:18px;
+  min-height:18px;
+  margin:0;
+  padding:0;
+  flex:0 0 auto;
+  accent-color:var(--primary);
+  cursor:pointer;
+  box-shadow:none;
+}
+.checkbox-box span{
+  color:var(--muted);
+  font-weight:600;
+}
+
+
+.obra-table-window{
+  height: 520px;
+  overflow-y: scroll;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.obra-table-window .simple-table thead th{
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 2;
+}
+
+
+.obras-table-window{
+  height: 560px;
+  overflow-y: scroll;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.obras-table-window .simple-table thead th{
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 2;
+}
+
+
+.row-focus-highlight{
+  animation: rowFocusPulse 2.2s ease;
+}
+
+@keyframes rowFocusPulse{
+  0%{background:rgba(46,102,240,.16)}
+  100%{background:transparent}
+}
+
+
+.inline-check{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  min-height:46px;
+  padding:0 12px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  white-space:nowrap;
+  background:#fff;
+}
+
+.inline-check input[type="checkbox"]{
+  width:18px;
+  height:18px;
+  margin:0;
 }
