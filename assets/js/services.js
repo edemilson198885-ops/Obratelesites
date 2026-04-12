@@ -616,6 +616,18 @@ OBRAS.services = {
   },
 
 
+
+  hasMeaningfulLocalData: function(db){
+    db = db || OBRAS.state || {};
+    return [
+      'empresas','clientes','parceiros','obras','recebimentos','repasses',
+      'pagamentosParceiros','despesas','despesasGerais','movimentosCaixa',
+      'despesasFixas','recurringIgnore'
+    ].some(function(key){
+      return Array.isArray(db[key]) && db[key].length > 0;
+    });
+  },
+
   normalizeRemoteSnapshot: function(snapshot){
     snapshot = snapshot || {};
     var keys = ['empresas','clientes','parceiros','obras','repasses','recebimentos','pagamentos_parceiros','despesas','despesas_gerais','movimentos_caixa','despesas_fixas','ignorados_recorrencia'];
@@ -757,15 +769,16 @@ OBRAS.services = {
         id: item.id || OBRAS.helpers.uid('desp'),
         os: item.os || '',
         competencia: item.competencia || ((item.dataVencimento || OBRAS.helpers.todayISO()).slice(0,7)),
-        data_despesa: item.dataDespesa || item.data || item.dataVencimento || OBRAS.helpers.todayISO(),
-        tipo_despesa: item.tipoDespesa || 'Despesa obra',
-        data_vencimento: item.dataVencimento || item.data || OBRAS.helpers.todayISO(),
-        data_pagamento_real: item.dataPagamentoReal || null,
+        data_despesa: item.dataDespesa || item.data_despesa || item.data || item.dataVencimento || OBRAS.helpers.todayISO(),
+        tipo_despesa: item.tipoDespesa || item.tipo_despesa || 'Despesa obra',
+        data_vencimento: item.dataVencimento || item.data_vencimento || item.data || OBRAS.helpers.todayISO(),
+        data_pagamento_real: item.dataPagamentoReal || item.data_pagamento_real || null,
         valor: Number(item.valor || 0),
-        origem_custo: item.origemCusto || '',
-        obs_outras_despesas: item.obsOutrasDespesas || '',
+        origem_custo: item.origemCusto || item.origem_custo || '',
+        obs_outras_despesas: item.obsOutrasDespesas || item.obs_outras_despesas || '',
         observacoes: item.observacoes || item.observacao || '',
-        gerada_automaticamente: !!item.geradaAutomaticamente,
+        gerada_automaticamente: !!(item.geradaAutomaticamente || item.gerada_automaticamente),
+        origem_lancamento: item.origemLancamento || item.origem_lancamento || '',
         created_at: item.createdAt || item.created_at || now,
         updated_at: item.updatedAt || item.updated_at || now,
         user_id: (db.session && db.session.userId) || ''
@@ -776,6 +789,7 @@ OBRAS.services = {
       return {
         id: item.id || OBRAS.helpers.uid('despgeral'),
         competencia: item.competencia || ((item.dataVencimento || OBRAS.helpers.todayISO()).slice(0,7)),
+        data: item.data || item.dataVencimento || OBRAS.helpers.todayISO(),
         tipo_despesa: item.tipoDespesa || 'Despesa geral',
         data_vencimento: item.dataVencimento || OBRAS.helpers.todayISO(),
         data_pagamento_real: item.dataPagamentoReal || null,
@@ -796,7 +810,8 @@ OBRAS.services = {
       return {
         id: item.id || OBRAS.helpers.uid('mov'),
         data_movimento: item.dataMovimento || item.data || OBRAS.helpers.todayISO(),
-        tipo: item.tipo || item.natureza || 'movimento',
+        tipo: item.tipo || 'movimento',
+        natureza: item.natureza || '',
         descricao: item.descricao || '',
         valor: Number(item.valor || 0),
         observacoes: item.observacoes || '',
@@ -824,8 +839,9 @@ OBRAS.services = {
     var ignorados = (db.recurringIgnore || []).map(function(item){
       return {
         id: item.id || OBRAS.helpers.uid('ign'),
-        regra_fixa_id: item.regraFixaId || item.regra_fixa_id || '',
-        competencia: item.competencia || ''
+        regra_fixa_id: item.regraFixaId || item.regra_fixa_id || item.recorrenciaId || '',
+        competencia: item.competencia || '',
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -931,10 +947,7 @@ OBRAS.services = {
       if (userId) query = query.eq('user_id', userId);
       var result = await query;
       if (result.error) {
-        // fallback for schemas that do not yet have user_id
-        var fallback = await client.from(t).select('*');
-        if (fallback.error) throw fallback.error;
-        result = fallback;
+        throw new Error('Tabela "' + t + '" sem coluna user_id. Corrija o banco antes de sincronizar.');
       }
       out[t] = Array.isArray(result.data) ? result.data : [];
     }
@@ -969,6 +982,8 @@ OBRAS.services = {
     if (!OBRAS.state.session || !OBRAS.state.session.loggedIn) return false;
     try {
       var snapshot = this.normalizeRemoteSnapshot(await this.fetchRemoteSnapshot());
+
+      // Prioridade total para download. Nunca subir base vazia no boot.
       if (this.hasRemoteData(snapshot)) {
         var check = this.validateRemoteSnapshot(snapshot);
         if (!check.ok) {
@@ -983,6 +998,14 @@ OBRAS.services = {
         OBRAS.ui.toast('Dados carregados da nuvem.');
         return true;
       }
+
+      // Se a nuvem estiver vazia, só mantém local. Não envia automaticamente.
+      if (this.hasMeaningfulLocalData(OBRAS.state)) {
+        OBRAS.ui.toast('Nuvem vazia. Use "Forçar envio agora" para publicar sua base.');
+        return false;
+      }
+
+      OBRAS.ui.toast('Nuvem vazia e base local vazia.');
       return false;
     } catch (err) {
       console.error(err);
@@ -993,6 +1016,10 @@ OBRAS.services = {
 
   forceCloudUpload: async function(){
     try {
+      if (!this.hasMeaningfulLocalData(OBRAS.state)) {
+        OBRAS.ui.toast('Upload bloqueado: base local vazia.');
+        return false;
+      }
       this.updateCloudControlAfterSave();
       await this.uploadAllToSupabase(true);
       OBRAS.state.cloud = OBRAS.state.cloud || {};
@@ -1594,6 +1621,18 @@ OBRAS.services = {
   },
 
 
+
+  hasMeaningfulLocalData: function(db){
+    db = db || OBRAS.state || {};
+    return [
+      'empresas','clientes','parceiros','obras','recebimentos','repasses',
+      'pagamentosParceiros','despesas','despesasGerais','movimentosCaixa',
+      'despesasFixas','recurringIgnore'
+    ].some(function(key){
+      return Array.isArray(db[key]) && db[key].length > 0;
+    });
+  },
+
   normalizeRemoteSnapshot: function(snapshot){
     snapshot = snapshot || {};
     var keys = ['empresas','clientes','parceiros','obras','repasses','recebimentos','pagamentos_parceiros','despesas','despesas_gerais','movimentos_caixa','despesas_fixas','ignorados_recorrencia'];
@@ -1735,15 +1774,16 @@ OBRAS.services = {
         id: item.id || OBRAS.helpers.uid('desp'),
         os: item.os || '',
         competencia: item.competencia || ((item.dataVencimento || OBRAS.helpers.todayISO()).slice(0,7)),
-        data_despesa: item.dataDespesa || item.data || item.dataVencimento || OBRAS.helpers.todayISO(),
-        tipo_despesa: item.tipoDespesa || 'Despesa obra',
-        data_vencimento: item.dataVencimento || item.data || OBRAS.helpers.todayISO(),
-        data_pagamento_real: item.dataPagamentoReal || null,
+        data_despesa: item.dataDespesa || item.data_despesa || item.data || item.dataVencimento || OBRAS.helpers.todayISO(),
+        tipo_despesa: item.tipoDespesa || item.tipo_despesa || 'Despesa obra',
+        data_vencimento: item.dataVencimento || item.data_vencimento || item.data || OBRAS.helpers.todayISO(),
+        data_pagamento_real: item.dataPagamentoReal || item.data_pagamento_real || null,
         valor: Number(item.valor || 0),
-        origem_custo: item.origemCusto || '',
-        obs_outras_despesas: item.obsOutrasDespesas || '',
+        origem_custo: item.origemCusto || item.origem_custo || '',
+        obs_outras_despesas: item.obsOutrasDespesas || item.obs_outras_despesas || '',
         observacoes: item.observacoes || item.observacao || '',
-        gerada_automaticamente: !!item.geradaAutomaticamente,
+        gerada_automaticamente: !!(item.geradaAutomaticamente || item.gerada_automaticamente),
+        origem_lancamento: item.origemLancamento || item.origem_lancamento || '',
         created_at: item.createdAt || item.created_at || now,
         updated_at: item.updatedAt || item.updated_at || now,
         user_id: (db.session && db.session.userId) || ''
@@ -1754,6 +1794,7 @@ OBRAS.services = {
       return {
         id: item.id || OBRAS.helpers.uid('despgeral'),
         competencia: item.competencia || ((item.dataVencimento || OBRAS.helpers.todayISO()).slice(0,7)),
+        data: item.data || item.dataVencimento || OBRAS.helpers.todayISO(),
         tipo_despesa: item.tipoDespesa || 'Despesa geral',
         data_vencimento: item.dataVencimento || OBRAS.helpers.todayISO(),
         data_pagamento_real: item.dataPagamentoReal || null,
@@ -1774,7 +1815,8 @@ OBRAS.services = {
       return {
         id: item.id || OBRAS.helpers.uid('mov'),
         data_movimento: item.dataMovimento || item.data || OBRAS.helpers.todayISO(),
-        tipo: item.tipo || item.natureza || 'movimento',
+        tipo: item.tipo || 'movimento',
+        natureza: item.natureza || '',
         descricao: item.descricao || '',
         valor: Number(item.valor || 0),
         observacoes: item.observacoes || '',
@@ -1802,8 +1844,9 @@ OBRAS.services = {
     var ignorados = (db.recurringIgnore || []).map(function(item){
       return {
         id: item.id || OBRAS.helpers.uid('ign'),
-        regra_fixa_id: item.regraFixaId || item.regra_fixa_id || '',
-        competencia: item.competencia || ''
+        regra_fixa_id: item.regraFixaId || item.regra_fixa_id || item.recorrenciaId || '',
+        competencia: item.competencia || '',
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -1909,10 +1952,7 @@ OBRAS.services = {
       if (userId) query = query.eq('user_id', userId);
       var result = await query;
       if (result.error) {
-        // fallback for schemas that do not yet have user_id
-        var fallback = await client.from(t).select('*');
-        if (fallback.error) throw fallback.error;
-        result = fallback;
+        throw new Error('Tabela "' + t + '" sem coluna user_id. Corrija o banco antes de sincronizar.');
       }
       out[t] = Array.isArray(result.data) ? result.data : [];
     }
@@ -1977,7 +2017,7 @@ OBRAS.services = {
         clienteNome: r.cliente_nome || '',
         siteTorre: r.site_torre || '',
         cidade: r.cidade || '',
-        statusObra: r.status_obra || 'Planejado',
+        statusObra: ((r.status_obra || 'Planejado') === 'Concluído' ? 'Concluída' : (r.status_obra || 'Planejado')),
         valorObra: Number(r.valor_obra || 0),
         observacoes: r.observacoes || '',
         statusCicloOS: r.status_ciclo_os || 'Ativa',
@@ -2249,15 +2289,16 @@ OBRAS.services = {
         id: item.id || OBRAS.helpers.uid('desp'),
         os: item.os || '',
         competencia: item.competencia || ((item.dataVencimento || OBRAS.helpers.todayISO()).slice(0,7)),
-        data_despesa: item.dataDespesa || item.data || item.dataVencimento || OBRAS.helpers.todayISO(),
-        tipo_despesa: item.tipoDespesa || 'Despesa obra',
-        data_vencimento: item.dataVencimento || item.data || OBRAS.helpers.todayISO(),
-        data_pagamento_real: item.dataPagamentoReal || null,
+        data_despesa: item.dataDespesa || item.data_despesa || item.data || item.dataVencimento || OBRAS.helpers.todayISO(),
+        tipo_despesa: item.tipoDespesa || item.tipo_despesa || 'Despesa obra',
+        data_vencimento: item.dataVencimento || item.data_vencimento || item.data || OBRAS.helpers.todayISO(),
+        data_pagamento_real: item.dataPagamentoReal || item.data_pagamento_real || null,
         valor: Number(item.valor || 0),
-        origem_custo: item.origemCusto || '',
-        obs_outras_despesas: item.obsOutrasDespesas || '',
+        origem_custo: item.origemCusto || item.origem_custo || '',
+        obs_outras_despesas: item.obsOutrasDespesas || item.obs_outras_despesas || '',
         observacoes: item.observacoes || item.observacao || '',
-        gerada_automaticamente: !!item.geradaAutomaticamente,
+        gerada_automaticamente: !!(item.geradaAutomaticamente || item.gerada_automaticamente),
+        origem_lancamento: item.origemLancamento || item.origem_lancamento || '',
         created_at: item.createdAt || item.created_at || now,
         updated_at: item.updatedAt || item.updated_at || now,
         user_id: (db.session && db.session.userId) || ''
@@ -2268,6 +2309,7 @@ OBRAS.services = {
       return {
         id: item.id || OBRAS.helpers.uid('despgeral'),
         competencia: item.competencia || ((item.dataVencimento || OBRAS.helpers.todayISO()).slice(0,7)),
+        data: item.data || item.dataVencimento || OBRAS.helpers.todayISO(),
         tipo_despesa: item.tipoDespesa || 'Despesa geral',
         data_vencimento: item.dataVencimento || OBRAS.helpers.todayISO(),
         data_pagamento_real: item.dataPagamentoReal || null,
@@ -2288,7 +2330,8 @@ OBRAS.services = {
       return {
         id: item.id || OBRAS.helpers.uid('mov'),
         data_movimento: item.dataMovimento || item.data || OBRAS.helpers.todayISO(),
-        tipo: item.tipo || item.natureza || 'movimento',
+        tipo: item.tipo || 'movimento',
+        natureza: item.natureza || '',
         descricao: item.descricao || '',
         valor: Number(item.valor || 0),
         observacoes: item.observacoes || '',
@@ -2316,8 +2359,9 @@ OBRAS.services = {
     var ignorados = (db.recurringIgnore || []).map(function(item){
       return {
         id: item.id || OBRAS.helpers.uid('ign'),
-        regra_fixa_id: item.regraFixaId || item.regra_fixa_id || '',
-        competencia: item.competencia || ''
+        regra_fixa_id: item.regraFixaId || item.regra_fixa_id || item.recorrenciaId || '',
+        competencia: item.competencia || '',
+        user_id: (db.session && db.session.userId) || ''
       };
     });
 
@@ -2423,10 +2467,7 @@ OBRAS.services = {
       if (userId) query = query.eq('user_id', userId);
       var result = await query;
       if (result.error) {
-        // fallback for schemas that do not yet have user_id
-        var fallback = await client.from(t).select('*');
-        if (fallback.error) throw fallback.error;
-        result = fallback;
+        throw new Error('Tabela "' + t + '" sem coluna user_id. Corrija o banco antes de sincronizar.');
       }
       out[t] = Array.isArray(result.data) ? result.data : [];
     }
@@ -2485,7 +2526,7 @@ OBRAS.services = {
         clienteNome: r.cliente_nome || '',
         siteTorre: r.site_torre || '',
         cidade: r.cidade || '',
-        statusObra: r.status_obra || 'Planejado',
+        statusObra: ((r.status_obra || 'Planejado') === 'Concluído' ? 'Concluída' : (r.status_obra || 'Planejado')),
         valorObra: Number(r.valor_obra || 0),
         observacoes: r.observacoes || '',
         statusCicloOS: r.status_ciclo_os || 'Ativa',
@@ -2561,6 +2602,7 @@ OBRAS.services = {
       return {
         id: r.id,
         competencia: r.competencia || '',
+        data: r.data || r.data_vencimento || '',
         tipoDespesa: r.tipo_despesa || '',
         dataVencimento: r.data_vencimento || '',
         dataPagamentoReal: r.data_pagamento_real || '',
@@ -2582,7 +2624,7 @@ OBRAS.services = {
         dataMovimento: r.data_movimento || '',
         data: r.data_movimento || '',
         tipo: r.tipo || '',
-        natureza: r.tipo || '',
+        natureza: r.natureza || '',
         descricao: r.descricao || '',
         valor: Number(r.valor || 0),
         observacoes: r.observacoes || '',
@@ -2631,42 +2673,62 @@ OBRAS.services = {
   },
 
   syncDeleteAndUpsert: async function(client, tableName, rows){
-    var existing = await client.from(tableName).select('id');
+    var userId = (OBRAS.state && OBRAS.state.session && OBRAS.state.session.userId) || '';
+    var query = client.from(tableName).select('id');
+    if (userId) query = query.eq('user_id', userId);
+    var existing = await query;
     if (existing.error) throw existing.error;
+
     var incomingIds = {};
     (rows || []).forEach(function(r){ incomingIds[r.id] = true; });
+
     var toDelete = (existing.data || []).map(function(r){ return r.id; }).filter(function(id){
       return !incomingIds[id];
     });
 
     if (toDelete.length) {
-      var del = await client.from(tableName).delete().in('id', toDelete);
+      var del = client.from(tableName).delete().in('id', toDelete);
+      if (userId) del = del.eq('user_id', userId);
+      del = await del;
       if (del.error) throw del.error;
     }
 
     if (rows && rows.length) {
-      var up = await client.from(tableName).upsert(rows, { onConflict: 'id' });
+      var prepared = rows.map(function(r){
+        var row = Object.assign({}, r);
+        if (userId) row.user_id = userId;
+        return row;
+      });
+      var up = await client.from(tableName).upsert(prepared, { onConflict: 'id' });
       if (up.error) throw up.error;
     }
   },
 
   uploadAllToSupabase: async function(showToast){
     if (!this.cloudEnabled() || !navigator.onLine) return;
+    if (!this.hasMeaningfulLocalData(OBRAS.state)) {
+      throw new Error('Upload bloqueado: base local vazia.');
+    }
+
     var client = this.getSupabaseClient();
     var rows = this.buildSupabaseRows();
+    var userId = (OBRAS.state && OBRAS.state.session && OBRAS.state.session.userId) || '';
+    if (!userId) {
+      throw new Error('Usuário sem userId para sincronizar.');
+    }
 
-    await this.syncDeleteAndUpsert(client, 'despesas', rows.despesas);
-    await this.syncDeleteAndUpsert(client, 'pagamentos_parceiros', rows.pagamentos_parceiros);
-    await this.syncDeleteAndUpsert(client, 'recebimentos', rows.recebimentos);
-    await this.syncDeleteAndUpsert(client, 'repasses', rows.repasses);
-    await this.syncDeleteAndUpsert(client, 'movimentos_caixa', rows.movimentos_caixa);
-    await this.syncDeleteAndUpsert(client, 'despesas_gerais', rows.despesas_gerais);
-    await this.syncDeleteAndUpsert(client, 'despesas_fixas', rows.despesas_fixas);
-    await this.syncDeleteAndUpsert(client, 'ignorados_recorrencia', rows.ignorados_recorrencia);
-    await this.syncDeleteAndUpsert(client, 'obras', rows.obras);
-    await this.syncDeleteAndUpsert(client, 'parceiros', rows.parceiros);
-    await this.syncDeleteAndUpsert(client, 'clientes', rows.clientes);
-    await this.syncDeleteAndUpsert(client, 'empresas', rows.empresas);
+    await this.syncDeleteAndUpsert(client, 'despesas', rows.despesas || []);
+    await this.syncDeleteAndUpsert(client, 'pagamentos_parceiros', rows.pagamentos_parceiros || []);
+    await this.syncDeleteAndUpsert(client, 'recebimentos', rows.recebimentos || []);
+    await this.syncDeleteAndUpsert(client, 'repasses', rows.repasses || []);
+    await this.syncDeleteAndUpsert(client, 'movimentos_caixa', rows.movimentos_caixa || []);
+    await this.syncDeleteAndUpsert(client, 'despesas_gerais', rows.despesas_gerais || []);
+    await this.syncDeleteAndUpsert(client, 'despesas_fixas', rows.despesas_fixas || []);
+    await this.syncDeleteAndUpsert(client, 'ignorados_recorrencia', rows.ignorados_recorrencia || []);
+    await this.syncDeleteAndUpsert(client, 'obras', rows.obras || []);
+    await this.syncDeleteAndUpsert(client, 'parceiros', rows.parceiros || []);
+    await this.syncDeleteAndUpsert(client, 'clientes', rows.clientes || []);
+    await this.syncDeleteAndUpsert(client, 'empresas', rows.empresas || []);
 
     this.markCloudStatus('Sync automática enviada');
     OBRAS.storage.save(OBRAS.state, OBRAS.config.STORAGE_KEY);
@@ -2689,7 +2751,7 @@ OBRAS.services = {
     }
 
     try {
-      var snapshot = await this.fetchRemoteSnapshot();
+      var snapshot = this.normalizeRemoteSnapshot(await this.fetchRemoteSnapshot());
       if (this.remoteHasData(snapshot)) {
         OBRAS.state = this.applyRemoteSnapshot(snapshot);
         OBRAS.stateApi.save();
@@ -2698,10 +2760,12 @@ OBRAS.services = {
         return;
       }
 
-      this.syncAutoNfExpenses();
-      await this.uploadAllToSupabase(false);
-      this.markCloudStatus('Primeira publicação enviada');
-      OBRAS.storage.save(OBRAS.state, OBRAS.config.STORAGE_KEY);
+      if (this.hasMeaningfulLocalData(OBRAS.state)) {
+        OBRAS.ui.toast('Nuvem vazia. Use "Forçar envio agora" para publicar sua base.');
+      } else {
+        OBRAS.state.cloud.lastSyncStatus = 'Nuvem vazia e base local vazia';
+        OBRAS.storage.save(OBRAS.state, OBRAS.config.STORAGE_KEY);
+      }
       OBRAS.app.render();
     } catch (err) {
       console.error(err);
@@ -2721,6 +2785,7 @@ OBRAS.services = {
       originalSave();
       clearTimeout(OBRAS._cloudSyncDebounce);
       OBRAS._cloudSyncDebounce = setTimeout(function(){
+        if (!OBRAS.services.hasMeaningfulLocalData(OBRAS.state)) return;
         OBRAS.services.uploadAllToSupabase(false).catch(function(err){
           console.error(err);
           OBRAS.state.cloud = OBRAS.state.cloud || {};
@@ -2733,7 +2798,7 @@ OBRAS.services = {
 
   forceCloudDownload: async function(){
     try {
-      var snapshot = await this.fetchRemoteSnapshot();
+      var snapshot = this.normalizeRemoteSnapshot(await this.fetchRemoteSnapshot());
       if (!this.remoteHasData(snapshot)) {
         OBRAS.ui.toast('Nenhum dado na nuvem.');
         return;
