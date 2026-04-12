@@ -719,6 +719,7 @@ OBRAS.services = {
         cidade: item.cidade || '',
         status_obra: item.statusObra || 'Planejado',
         valor_obra: Number(item.valorObra || 0),
+        etapa: item.etapa || '',
         observacoes: item.observacoes || '',
         status_ciclo_os: item.statusCicloOS || 'Ativa',
         created_at: item.createdAt || item.created_at || now,
@@ -1745,6 +1746,7 @@ OBRAS.services = {
         cidade: item.cidade || '',
         status_obra: item.statusObra || 'Planejado',
         valor_obra: Number(item.valorObra || 0),
+        etapa: item.etapa || '',
         observacoes: item.observacoes || '',
         status_ciclo_os: item.statusCicloOS || 'Ativa',
         created_at: item.createdAt || item.created_at || now,
@@ -2260,6 +2262,7 @@ OBRAS.services = {
         cidade: item.cidade || '',
         status_obra: item.statusObra || 'Planejado',
         valor_obra: Number(item.valorObra || 0),
+        etapa: item.etapa || '',
         observacoes: item.observacoes || '',
         status_ciclo_os: item.statusCicloOS || 'Ativa',
         created_at: item.createdAt || item.created_at || now,
@@ -2561,7 +2564,7 @@ OBRAS.services = {
         observacoes: r.observacoes || '',
         statusCicloOS: r.status_ciclo_os || 'Ativa',
         parceiroNome: rep ? (rep.parceiro_nome || '') : '',
-        etapa: '',
+        etapa: r.etapa || '',
         createdAt: r.created_at || '',
         updatedAt: r.updated_at || ''
       };
