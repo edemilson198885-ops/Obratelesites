@@ -410,7 +410,7 @@ OBRAS.services = {
     OBRAS.stateApi.save();
     OBRAS.app.render();
   },
-  submitObra: function(){
+  submitObra: async function(){
     var form = document.getElementById('obra-form');
     if (!form) return;
     var id = form.getAttribute('data-edit-id');
@@ -426,6 +426,11 @@ OBRAS.services = {
       OBRAS.ui.toast('Preencha obra, cidade e valor.');
       return;
     }
+
+    var existing = (OBRAS.state.obras || []).find(function(x){
+      return String(x.id || '') === String(id || '');
+    }) || null;
+
     var payload = {
       id: id || OBRAS.helpers.uid('obra'),
       numeroOS: numeroOS || OBRAS.rules.nextOS(OBRAS.state),
@@ -436,18 +441,34 @@ OBRAS.services = {
       clienteNome: clienteNome,
       etapa: etapa,
       statusObra: statusObra,
-      statusCicloOS: 'Ativa',
-      dataAbertura: document.getElementById('obra-data').value || OBRAS.helpers.todayISO()
+      statusCicloOS: existing && existing.statusCicloOS ? existing.statusCicloOS : 'Ativa',
+      dataAbertura: document.getElementById('obra-data').value || (existing && existing.dataAbertura) || OBRAS.helpers.todayISO(),
+      createdAt: existing && existing.createdAt ? existing.createdAt : new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
+
     var idx = OBRAS.state.obras.findIndex(function(x){ return x.id === payload.id; });
-    if (idx >= 0) OBRAS.state.obras[idx] = payload;
+    if (idx >= 0) OBRAS.state.obras[idx] = Object.assign({}, OBRAS.state.obras[idx], payload);
     else OBRAS.state.obras.push(payload);
+
     OBRAS.services.syncAutoNfExpenses();
     OBRAS.state.ui = OBRAS.state.ui || {};
     OBRAS.state.ui.obrasReturnFocusId = payload.id;
     OBRAS.state.form = {};
     OBRAS.stateApi.save();
     OBRAS.router.goTo(OBRAS.config.SCREENS.OBRAS);
+
+    if (OBRAS.services.cloudEnabled && OBRAS.services.cloudEnabled() && navigator.onLine) {
+      try {
+        if (OBRAS.services.unlockCloudAutoUpload) OBRAS.services.unlockCloudAutoUpload('obra_submit');
+        if (OBRAS.services.uploadAllToSupabase) await OBRAS.services.uploadAllToSupabase(false);
+      } catch (err) {
+        console.error(err);
+        OBRAS.ui.toast('Obra salva localmente, mas houve falha ao enviar etapa para a nuvem.');
+        return;
+      }
+    }
+
     OBRAS.ui.toast(idx >= 0 ? 'Obra atualizada.' : 'Obra cadastrada.');
   },
   editObra: function(id){
