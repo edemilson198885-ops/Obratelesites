@@ -141,7 +141,7 @@ OBRAS.financeiroScreen = {
 
       OBRAS.ui.setHTML('screen-container',
         '<div class="screen-head">'
-        + '  <div><h1 class="screen-title">Financeiro</h1><div class="screen-subtitle">V9.3 com pagar, editar e excluir diretamente no fluxo financeiro, inclusive NF e despesas gerais.</div></div>'
+        + '  <div><h1 class="screen-title">Financeiro</h1></div>'
         + '  <div class="actions-row"><button class="btn" data-go="dashboard">Voltar ao painel</button></div>'
         + '</div>'
         + '<div class="kpi-grid compact-kpi-grid">'

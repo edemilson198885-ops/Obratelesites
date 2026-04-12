@@ -18,7 +18,7 @@ OBRAS.cadastrosScreen = {
     var current = OBRAS.state.form && OBRAS.state.form.cadastro ? OBRAS.state.form.cadastro : {};
     OBRAS.ui.setHTML('screen-container',
       '<div class="screen-head">'
-      + '  <div><h1 class="screen-title">Cadastros</h1><div class="screen-subtitle">Fase 3 com cadastro real de empresas, parceiros e clientes, sem quebrar o layout aprovado.</div></div>'
+      + '  <div><h1 class="screen-title">Cadastros</h1></div>'
       + '</div>'
       + '<div class="split-card">'
       + '  <div class="form-card">'

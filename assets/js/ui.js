@@ -28,22 +28,21 @@ OBRAS.ui = {
     return 'warning';
   },
   navItem: function(current, key, title, subtitle){
-    return '<button class="nav-btn ' + (current === key ? 'active' : '') + '" data-go="' + key + '"><span class="nav-icon">' + OBRAS.ui.icon(key) + '</span><span class="nav-copy"><span class="nav-title">' + title + '</span><span class="nav-subtitle">' + subtitle + '</span></span></button>';
+    return '<button class="nav-btn ' + (current === key ? 'active' : '') + '" data-go="' + key + '"><span class="nav-icon">' + OBRAS.ui.icon(key) + '</span><span class="nav-copy"><span class="nav-title">' + title + '</span>' + (subtitle ? '<span class="nav-subtitle">' + subtitle + '</span>' : '') + '</span></button>';
   },
   renderSidebar: function(){
     if (!OBRAS.state.session.loggedIn) {
       this.setHTML('sidebar', '');
       return;
     }
-    this.setHTML('sidebar', '      <div class="brand-box">        <img src="./assets/img/logo-telesites.png" alt="Logo TELESITES" />        <div>          <div class="brand-title">TELESITES</div>          <div class="brand-sub">Gestão de obras e financeiro</div>        </div>      </div>      <div class="nav-section">        <div class="nav-label">Gestão</div>        ' + this.navItem(OBRAS.state.currentScreen, 'dashboard', 'Dashboard', 'Visão geral') + '        ' + this.navItem(OBRAS.state.currentScreen, 'obras', 'Central de obras', 'Cadastro e status') + '        ' + this.navItem(OBRAS.state.currentScreen, 'financeiro', 'Financeiro', 'Receitas e despesas') + '      </div>      <div class="nav-section">        <div class="nav-label">Base</div>        ' + this.navItem(OBRAS.state.currentScreen, 'cadastros', 'Cadastros', 'Empresas e parceiros') + '        ' + this.navItem(OBRAS.state.currentScreen, 'configuracoes', 'Configurações', 'Backup e preferências') + '      </div>      <div class="sidebar-footer">Fases 7 e 8.3: relatórios e sync remota com Supabase.</div>    ');
+    this.setHTML('sidebar', '      <div class="brand-box">        <img src="./assets/img/logo-telesites.png" alt="Logo TELESITES" />        <div>          <div class="brand-title">TELESITES</div>          <div class="brand-sub">Controle operacional</div>        </div>      </div>      <div class="nav-section">        <div class="nav-label">Menu</div>        ' + this.navItem(OBRAS.state.currentScreen, 'dashboard', 'Dashboard', '') + '        ' + this.navItem(OBRAS.state.currentScreen, 'obras', 'Obras', '') + '        ' + this.navItem(OBRAS.state.currentScreen, 'financeiro', 'Financeiro', '') + '        ' + this.navItem(OBRAS.state.currentScreen, 'cadastros', 'Cadastros', '') + '        ' + this.navItem(OBRAS.state.currentScreen, 'configuracoes', 'Config', '') + '      </div>    ');
   },
   renderTopbar: function(){
     if (!OBRAS.state.session.loggedIn) {
       this.setHTML('topbar', '');
       return;
     }
-    var imported = OBRAS.state.meta && OBRAS.state.meta.importedFromLegacy;
-    this.setHTML('topbar', '      <div class="panel topbar">        <div class="topbar-left">          <img class="topbar-logo" src="./assets/img/logo-telesites.png" alt="Logo" />          <div>            <div class="topbar-title">Controle de Obras</div>            <div class="topbar-sub">TELESITES · Fase 2 local com banco ativo · ' + OBRAS.helpers.todayLabel() + (imported ? ' · dados legados importados' : '') + '</div>          </div>        </div>        <div class="topbar-right">          <div class="pill"><span class="pill-dot"></span>Modo local ativo</div>          <div class="pill">Usuário: ' + OBRAS.helpers.escape(OBRAS.state.session.userName || 'Local') + '</div>          <button class="btn btn-soft" id="logout-btn">Sair</button>        </div>      </div>    ');
+    this.setHTML('topbar', '      <div class="panel topbar">        <div class="topbar-left">          <img class="topbar-logo" src="./assets/img/logo-telesites.png" alt="Logo" />          <div>            <div class="topbar-title">Controle de Obras</div>            <div class="topbar-sub">' + OBRAS.helpers.todayLabel() + '</div>          </div>        </div>        <div class="topbar-right">          <div class="pill"><span class="pill-dot"></span>Local</div>          <div class="pill">' + OBRAS.helpers.escape(OBRAS.state.session.userName || 'Local') + '</div>          <button class="btn btn-soft" id="logout-btn">Sair</button>        </div>      </div>    ');
   },
   renderBottomNav: function(){
     if (!OBRAS.state.session.loggedIn) {

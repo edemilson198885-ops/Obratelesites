@@ -60,12 +60,12 @@ OBRAS.relatoriosScreen = {
 
       OBRAS.ui.setHTML('screen-container',
         '<div class="screen-head">'
-        + '  <div><h1 class="screen-title">Relatórios</h1><div class="screen-subtitle">Fase 7 isolada: leitura gerencial sem mexer em login, nuvem ou no fluxo principal.</div></div>'
-        + '  <div class="actions-row"><button class="btn btn-primary" id="relatorio-export-btn">Exportar TXT</button><button class="btn" data-go="dashboard">Voltar ao painel</button></div>'
+        + '  <div><h1 class="screen-title">Relatórios</h1></div>'
+        + '  <div class="actions-row"><button class="btn btn-primary" id="relatorio-export-btn">Exportar TXT</button><button class="btn" data-go="dashboard">Dashboard</button></div>'
         + '</div>'
         + '<div class="kpi-grid compact-kpi-grid">'
-        + '  <div class="kpi-card"><div class="kpi-label">Receita contratada</div><div class="kpi-value">' + OBRAS.helpers.money(m.receitaContratada) + '</div><div class="kpi-note">Total contratado</div></div>'
-        + '  <div class="kpi-card"><div class="kpi-label">Receita recebida</div><div class="kpi-value">' + OBRAS.helpers.money(m.receitaRecebida) + '</div><div class="kpi-note">Entradas confirmadas</div></div>'
+        + '  <div class="kpi-card"><div class="kpi-label">Contratado</div><div class="kpi-value">' + OBRAS.helpers.money(m.receitaContratada) + '</div><div class="kpi-note">Total contratado</div></div>'
+        + '  <div class="kpi-card"><div class="kpi-label">Recebido</div><div class="kpi-value">' + OBRAS.helpers.money(m.receitaRecebida) + '</div><div class="kpi-note">Entradas confirmadas</div></div>'
         + '  <div class="kpi-card"><div class="kpi-label">A receber</div><div class="kpi-value">' + OBRAS.helpers.money(m.aReceberObras) + '</div><div class="kpi-note">Saldo de cobrança</div></div>'
         + '  <div class="kpi-card"><div class="kpi-label">Caixa projetado</div><div class="kpi-value">' + OBRAS.helpers.money(m.caixaProjetado) + '</div><div class="kpi-note">Leitura consolidada</div></div>'
         + '</div>'

@@ -65,8 +65,8 @@ OBRAS.obrasScreen = {
 
     OBRAS.ui.setHTML('screen-container',
       '<div class="screen-head">'
-      + '  <div><h1 class="screen-title">Central de obras</h1><div class="screen-subtitle">Filtros corrigidos para status, cidade, parceiro e cliente com leitura por correspondência real dos dados.</div></div>'
-      + '  <div class="actions-row"><button class="btn btn-primary" data-go="dashboard">Voltar ao painel</button></div>'
+      + '  <div><h1 class="screen-title">Obras</h1></div>'
+      + '  <div class="actions-row"><button class="btn btn-primary" data-go="dashboard">Dashboard</button></div>'
       + '</div>'
       + '<div class="kpi-grid compact-kpi-grid">'
       + '  <div class="kpi-card"><div class="kpi-label">Obras cadastradas</div><div class="kpi-value">' + metrics.length + '</div><div class="kpi-note">Base operacional atual</div></div>'

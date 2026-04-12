@@ -42,7 +42,7 @@ OBRAS.obraDetalheScreen = {
 
     var html = ''
       + '<div class="screen-head">'
-      + '  <div><h1 class="screen-title">Detalhe da obra</h1><div class="screen-subtitle">Resumo completo da obra, com lançamentos, edição rápida e visão financeira por OS.</div></div>'
+      + '  <div><h1 class="screen-title">Detalhe da obra</h1></div>'
       + '  <div class="actions-row"><button class="btn" data-go="obras">Voltar para central</button></div>'
       + '</div>'
       + '<div class="detail-hero">'
