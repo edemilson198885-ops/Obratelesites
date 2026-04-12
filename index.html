@@ -4,7 +4,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0f172a" />
+  <meta name="theme-color" content="#0f1c38" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="TELESITES" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./assets/img/apple-touch-icon.png" />
   <title>Controle de Obras TELESITES</title>
   <link rel="icon" type="image/png" href="./assets/img/logo-telesites.png" />
   <link rel="stylesheet" href="./assets/css/app.css?v=9.7.0" />
@@ -40,5 +45,12 @@
   <script src="./assets/js/screens/obra-detalhe.screen.js?v=9.7.0"></script>
   <script src="./assets/js/screens/relatorios.screen.js?v=9.7.0"></script>
   <script src="./assets/js/app.js?v=9.7.0"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function(){
+        navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(function(err){ console.error('SW error', err); });
+      });
+    }
+  </script>
 </body>
 </html>
