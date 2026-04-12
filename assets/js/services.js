@@ -978,6 +978,25 @@ OBRAS.services = {
     return keys.some(function(k){ return Array.isArray(snapshot[k]) && snapshot[k].length > 0; });
   },
 
+  canAutoUploadToCloud: function(){
+    var cloud = OBRAS.state.cloud || {};
+    return cloud.syncUnlocked === true;
+  },
+
+  unlockCloudAutoUpload: function(reason){
+    OBRAS.state.cloud = OBRAS.state.cloud || {};
+    OBRAS.state.cloud.syncUnlocked = true;
+    if (reason) OBRAS.state.cloud.syncUnlockReason = reason;
+    OBRAS.storage.save(OBRAS.state, OBRAS.config.STORAGE_KEY);
+  },
+
+  lockCloudAutoUpload: function(reason){
+    OBRAS.state.cloud = OBRAS.state.cloud || {};
+    OBRAS.state.cloud.syncUnlocked = false;
+    if (reason) OBRAS.state.cloud.syncLockReason = reason;
+    OBRAS.storage.save(OBRAS.state, OBRAS.config.STORAGE_KEY);
+  },
+
   bootstrapAutoSync: async function(){
     if (!OBRAS.state.session || !OBRAS.state.session.loggedIn) return false;
     try {
@@ -2735,11 +2754,31 @@ OBRAS.services = {
     if (showToast) OBRAS.ui.toast('Sincronizado com Supabase.');
   },
 
+  canAutoUploadToCloud: function(){
+    var cloud = OBRAS.state.cloud || {};
+    return cloud.syncUnlocked === true;
+  },
+
+  unlockCloudAutoUpload: function(reason){
+    OBRAS.state.cloud = OBRAS.state.cloud || {};
+    OBRAS.state.cloud.syncUnlocked = true;
+    if (reason) OBRAS.state.cloud.syncUnlockReason = reason;
+    OBRAS.storage.save(OBRAS.state, OBRAS.config.STORAGE_KEY);
+  },
+
+  lockCloudAutoUpload: function(reason){
+    OBRAS.state.cloud = OBRAS.state.cloud || {};
+    OBRAS.state.cloud.syncUnlocked = false;
+    if (reason) OBRAS.state.cloud.syncLockReason = reason;
+    OBRAS.storage.save(OBRAS.state, OBRAS.config.STORAGE_KEY);
+  },
+
   bootstrapAutoSync: async function(){
     OBRAS.state.cloud = OBRAS.state.cloud || {};
     OBRAS.state.cloud.online = !!navigator.onLine;
 
     if (!this.cloudEnabled()) {
+      this.lockCloudAutoUpload('cloud_disabled');
       OBRAS.state.cloud.lastSyncStatus = 'Sync desativada';
       OBRAS.storage.save(OBRAS.state, OBRAS.config.STORAGE_KEY);
       return;
@@ -2755,13 +2794,17 @@ OBRAS.services = {
       if (this.remoteHasData(snapshot)) {
         OBRAS.state = this.applyRemoteSnapshot(snapshot);
         OBRAS.stateApi.save();
+        this.unlockCloudAutoUpload('remote_snapshot_loaded');
         OBRAS.app.render();
         OBRAS.ui.toast('Base carregada do Supabase.');
         return;
       }
 
+      this.lockCloudAutoUpload('remote_empty');
       if (this.hasMeaningfulLocalData(OBRAS.state)) {
-        OBRAS.ui.toast('Nuvem vazia. Use "Forçar envio agora" para publicar sua base.');
+        OBRAS.state.cloud.lastSyncStatus = 'Nuvem vazia. Envio manual necessário';
+        OBRAS.storage.save(OBRAS.state, OBRAS.config.STORAGE_KEY);
+        OBRAS.ui.toast('Nuvem vazia. Envio automático bloqueado até confirmação manual.');
       } else {
         OBRAS.state.cloud.lastSyncStatus = 'Nuvem vazia e base local vazia';
         OBRAS.storage.save(OBRAS.state, OBRAS.config.STORAGE_KEY);
@@ -2786,6 +2829,7 @@ OBRAS.services = {
       clearTimeout(OBRAS._cloudSyncDebounce);
       OBRAS._cloudSyncDebounce = setTimeout(function(){
         if (!OBRAS.services.hasMeaningfulLocalData(OBRAS.state)) return;
+        if (!OBRAS.services.canAutoUploadToCloud()) return;
         OBRAS.services.uploadAllToSupabase(false).catch(function(err){
           console.error(err);
           OBRAS.state.cloud = OBRAS.state.cloud || {};
@@ -2800,11 +2844,13 @@ OBRAS.services = {
     try {
       var snapshot = this.normalizeRemoteSnapshot(await this.fetchRemoteSnapshot());
       if (!this.remoteHasData(snapshot)) {
+        this.lockCloudAutoUpload('remote_empty_manual_download');
         OBRAS.ui.toast('Nenhum dado na nuvem.');
         return;
       }
       OBRAS.state = this.applyRemoteSnapshot(snapshot);
       OBRAS.stateApi.save();
+      this.unlockCloudAutoUpload('manual_download');
       OBRAS.app.render();
       OBRAS.ui.toast('Base baixada da nuvem.');
     } catch (err) {
@@ -2815,6 +2861,7 @@ OBRAS.services = {
 
   forceCloudUpload: async function(){
     try {
+      this.unlockCloudAutoUpload('manual_upload');
       await this.uploadAllToSupabase(true);
       OBRAS.app.render();
     } catch (err) {

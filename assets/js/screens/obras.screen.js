@@ -13,6 +13,23 @@ OBRAS.obrasScreen = {
     return this.norm(target) === this.norm(selected);
   },
 
+
+  osOrder: function(value){
+    var match = String(value || '').match(/(\d+)/g);
+    return match && match.length ? Number(match[match.length - 1]) : Number.MAX_SAFE_INTEGER;
+  },
+
+  sortByOS: function(items){
+    var self = this;
+    return (items || []).slice().sort(function(a, b){
+      var aOS = a && a.numeroOS ? a.numeroOS : '';
+      var bOS = b && b.numeroOS ? b.numeroOS : '';
+      var diff = self.osOrder(aOS) - self.osOrder(bOS);
+      if (diff !== 0) return diff;
+      return String(aOS).localeCompare(String(bOS), 'pt-BR', { numeric: true, sensitivity: 'base' });
+    });
+  },
+
   renderForm: function(){
     var current = OBRAS.state.form && OBRAS.state.form.obra ? OBRAS.state.form.obra : {};
     var metrics = OBRAS.state.obras.map(function(o){ return OBRAS.rules.obraMetrics(o, OBRAS.state); });
@@ -27,7 +44,7 @@ OBRAS.obrasScreen = {
     var cidades = Array.from(new Set(metrics.map(function(o){ return o.cidade; }).concat((OBRAS.state.obras || []).map(function(o){ return o.cidade; })).filter(Boolean))).sort();
     var parceiros = Array.from(new Set(metrics.map(function(o){ return o.parceiroNome; }).concat(parceirosLista).filter(function(v){ return v && v !== '-'; }))).sort();
     var clientes = Array.from(new Set(metrics.map(function(o){ return o.clienteNome; }).concat(clientesLista).filter(function(v){ return v && v !== '-'; }))).sort();
-    var osList = Array.from(new Set(metrics.map(function(o){ return o.numeroOS; }).filter(Boolean))).sort();
+    var osList = this.sortByOS(Array.from(new Set(metrics.map(function(o){ return o.numeroOS; }).filter(Boolean))).map(function(numeroOS){ return { numeroOS: numeroOS }; })).map(function(item){ return item.numeroOS; });
 
     var self = this;
     var filtered = metrics.filter(function(obra){
@@ -39,6 +56,7 @@ OBRAS.obrasScreen = {
       var okCliente = self.matchValue(obra.clienteNome, filtros.cliente);
       return okQuery && okStatus && okCidade && okParceiro && okCliente;
     });
+    filtered = this.sortByOS(filtered);
 
     var countExec = metrics.filter(function(x){ return self.norm(x.statusObra) === self.norm('Em execução') || self.norm(x.statusObra) === self.norm('Em andamento'); }).length;
     var countPlanej = metrics.filter(function(x){ return self.norm(x.statusObra) === self.norm('Planejado') || self.norm(x.statusObra) === self.norm('Planejamento'); }).length;
