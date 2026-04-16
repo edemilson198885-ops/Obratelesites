@@ -52,7 +52,7 @@ OBRAS.obraDetalheScreen = {
       + '<div class="kpi-grid">'
       + '  <div class="kpi-card"><div class="kpi-label">Valor da obra</div><div class="kpi-value">' + OBRAS.helpers.money(metric.valorObra) + '</div><div class="kpi-note">Contrato base</div></div>'
       + '  <div class="kpi-card"><div class="kpi-label">Recebido</div><div class="kpi-value">' + OBRAS.helpers.money(metric.totalRecebido) + '</div><div class="kpi-note">Entradas confirmadas</div></div>'
-      + '  <div class="kpi-card"><div class="kpi-label">A receber</div><div class="kpi-value">' + OBRAS.helpers.money(metric.saldoReceber) + '</div><div class="kpi-note">Saldo em aberto</div></div>'
+      + '  <div class="kpi-card"><div class="kpi-label">Repasse fechado</div><div class="kpi-value">' + OBRAS.helpers.money(metric.valorFechadoParceiro) + '</div><div class="kpi-note">Valor combinado com parceiro</div></div>'
       + '  <div class="kpi-card"><div class="kpi-label">Saldo líquido</div><div class="kpi-value">' + OBRAS.helpers.money(metric.resultadoLiquido) + '</div><div class="kpi-note">Recebido - pagamentos - despesas</div></div>'
       + '</div>'
       + '<div class="detail-grid">'
@@ -73,9 +73,11 @@ OBRAS.obraDetalheScreen = {
       + '  <div class="list-card"><h3 class="card-title">Resumo operacional</h3>'
       + '    <div class="inline-stat"><span class="muted">Parceiro</span><strong>' + OBRAS.helpers.escape(obra.parceiroNome || '-') + '</strong></div>'
       + '    <div class="inline-stat"><span class="muted">Cliente</span><strong>' + OBRAS.helpers.escape(obra.clienteNome || '-') + '</strong></div>'
-      + '    <div class="inline-stat"><span class="muted">Pagamentos</span><strong>' + OBRAS.helpers.money(metric.pagoParceiros) + '</strong></div>'
+      + '    <div class="inline-stat"><span class="muted">Repasse fechado</span><strong>' + OBRAS.helpers.money(metric.valorFechadoParceiro) + '</strong></div>'
+      + '    <div class="inline-stat"><span class="muted">Pagamentos</span><strong>' + OBRAS.helpers.money(metric.totalPagoParceiro) + '</strong></div>'
+      + '    <div class="inline-stat"><span class="muted">Saldo parceiro</span><strong>' + OBRAS.helpers.money(metric.saldoParceiro) + '</strong></div>'
       + '    <div class="inline-stat"><span class="muted">Despesas</span><strong>' + OBRAS.helpers.money(metric.despesasPagas) + '</strong></div>'
-      + '    <div class="top-alert">Agora a tela da obra permite lançar, editar e excluir sem sair da OS.</div>'
+      + '    <div class="top-alert">Agora a obra mostra e salva o repasse do parceiro direto no cadastro da OS.</div>'
       + '  </div>'
       + '</div>';
 

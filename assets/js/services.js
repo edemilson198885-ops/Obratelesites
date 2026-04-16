@@ -1470,6 +1470,8 @@ OBRAS.services = {
     var siteTorre = document.getElementById('obra-nome').value.trim();
     var cidade = document.getElementById('obra-cidade').value.trim();
     var valorObra = Number(document.getElementById('obra-valor').value || 0);
+    var valorRepasse = Number(document.getElementById('obra-repasse-valor') && document.getElementById('obra-repasse-valor').value || 0);
+    var repasseObservacoes = document.getElementById('obra-repasse-obs') ? document.getElementById('obra-repasse-obs').value.trim() : '';
     var parceiroNome = document.getElementById('obra-parceiro').value.trim();
     var clienteNome = document.getElementById('obra-cliente') ? document.getElementById('obra-cliente').value.trim() : '';
     var etapa = document.getElementById('obra-etapa').value.trim();
@@ -1478,6 +1480,7 @@ OBRAS.services = {
       OBRAS.ui.toast('Preencha obra, cidade e valor.');
       return;
     }
+    var existing = (OBRAS.state.obras || []).find(function(x){ return String(x.id || '') === String(id || ''); }) || null;
     var payload = {
       id: id || OBRAS.helpers.uid('obra'),
       numeroOS: numeroOS || OBRAS.rules.nextOS(OBRAS.state),
@@ -1488,13 +1491,44 @@ OBRAS.services = {
       clienteNome: clienteNome,
       etapa: etapa,
       statusObra: statusObra,
-      statusCicloOS: 'Ativa',
-      dataAbertura: document.getElementById('obra-data').value || OBRAS.helpers.todayISO()
+      statusCicloOS: existing && existing.statusCicloOS ? existing.statusCicloOS : 'Ativa',
+      dataAbertura: document.getElementById('obra-data').value || (existing && existing.dataAbertura) || OBRAS.helpers.todayISO(),
+      createdAt: existing && existing.createdAt ? existing.createdAt : new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     var idx = OBRAS.state.obras.findIndex(function(x){ return x.id === payload.id; });
-    if (idx >= 0) OBRAS.state.obras[idx] = payload;
+    if (idx >= 0) OBRAS.state.obras[idx] = Object.assign({}, OBRAS.state.obras[idx], payload);
     else OBRAS.state.obras.push(payload);
+
+    var repasseIdx = (OBRAS.state.repasses || []).findIndex(function(x){
+      return x.obraId === payload.id || x.os === payload.numeroOS;
+    });
+    if (valorRepasse > 0 || repasseObservacoes) {
+      var repasseAtual = repasseIdx >= 0 ? OBRAS.state.repasses[repasseIdx] : null;
+      var parceiroObj = (OBRAS.state.parceiros || []).find(function(p){
+        return String(p.nome || '').trim().toLowerCase() === String(parceiroNome || '').trim().toLowerCase();
+      });
+      var parceiroId = parceiroObj && parceiroObj.id ? parceiroObj.id : ((repasseAtual && repasseAtual.parceiroId) || '');
+      var repassePayload = Object.assign({}, repasseAtual || {}, {
+        id: repasseAtual && repasseAtual.id ? repasseAtual.id : OBRAS.helpers.uid('rep'),
+        obraId: payload.id,
+        os: payload.numeroOS,
+        parceiroId: parceiroId,
+        parceiroNome: parceiroNome,
+        valorFechadoParceiro: valorRepasse,
+        observacoes: repasseObservacoes,
+        createdAt: repasseAtual && repasseAtual.createdAt ? repasseAtual.createdAt : new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      if (repasseIdx >= 0) OBRAS.state.repasses[repasseIdx] = repassePayload;
+      else OBRAS.state.repasses.push(repassePayload);
+    } else if (repasseIdx >= 0) {
+      OBRAS.state.repasses.splice(repasseIdx, 1);
+    }
+
     OBRAS.services.syncAutoNfExpenses();
+    OBRAS.state.ui = OBRAS.state.ui || {};
+    OBRAS.state.ui.obrasReturnFocusId = payload.id;
     OBRAS.state.form = {};
     OBRAS.stateApi.save();
     OBRAS.router.goTo(OBRAS.config.SCREENS.OBRAS);
@@ -1503,6 +1537,7 @@ OBRAS.services = {
   editObra: function(id){
     var obra = OBRAS.state.obras.find(function(x){ return x.id === id; });
     if (!obra) return;
+    var repasse = (OBRAS.state.repasses || []).find(function(x){ return x.obraId === obra.id || x.os === obra.numeroOS; }) || null;
     OBRAS.state.form = {
       obra: {
         id: obra.id,
@@ -1510,6 +1545,8 @@ OBRAS.services = {
         siteTorre: obra.siteTorre,
         cidade: obra.cidade,
         valorObra: obra.valorObra,
+        valorRepasse: repasse ? Number(repasse.valorFechadoParceiro || 0) : '',
+        repasseObservacoes: repasse ? (repasse.observacoes || '') : '',
         parceiroNome: obra.parceiroNome,
         clienteNome: obra.clienteNome || '',
         etapa: obra.etapa,

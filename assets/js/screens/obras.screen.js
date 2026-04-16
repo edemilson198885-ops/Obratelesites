@@ -60,6 +60,9 @@ OBRAS.obrasScreen = {
 
   renderForm: function(){
     var current = OBRAS.state.form && OBRAS.state.form.obra ? OBRAS.state.form.obra : {};
+    var currentRepasse = (OBRAS.state.repasses || []).find(function(r){
+      return (current.id && r.obraId === current.id) || (current.numeroOS && r.os === current.numeroOS);
+    }) || null;
     var metrics = OBRAS.state.obras.map(function(o){ return OBRAS.rules.obraMetrics(o, OBRAS.state); });
     var filtros = (OBRAS.state.ui && OBRAS.state.ui.obrasFilters) || { query:'', status:'todos', cidade:'', parceiro:'', cliente:'' };
 
@@ -137,11 +140,13 @@ OBRAS.obrasScreen = {
       + '        <div class="field"><label>Nome da obra</label><input id="obra-nome" value="' + OBRAS.helpers.escape(current.siteTorre || '') + '" /></div>'
       + '        <div class="field"><label>Cidade</label><input id="obra-cidade" value="' + OBRAS.helpers.escape(current.cidade || '') + '" /></div>'
       + '        <div class="field"><label>Valor da obra</label><input id="obra-valor" type="number" step="0.01" value="' + OBRAS.helpers.escape(current.valorObra || '') + '" /></div>'
+      + '        <div class="field"><label>Valor repasse</label><input id="obra-repasse-valor" type="number" step="0.01" value="' + OBRAS.helpers.escape(current.valorRepasse != null ? current.valorRepasse : (currentRepasse ? currentRepasse.valorFechadoParceiro : '')) + '" /></div>'
       + '        <div class="field"><label>Parceiro</label><input id="obra-parceiro" list="lista-parceiros" value="' + OBRAS.helpers.escape(current.parceiroNome || '') + '" /><datalist id="lista-parceiros">' + parceirosOpt + '</datalist></div>'
       + '        <div class="field"><label>Cliente</label><input id="obra-cliente" list="lista-clientes" value="' + OBRAS.helpers.escape(current.clienteNome || '') + '" /><datalist id="lista-clientes">' + clientesOpt + '</datalist></div>'
       + '        <div class="field"><label>Etapa</label><input id="obra-etapa" value="' + OBRAS.helpers.escape(current.etapa || '') + '" /></div>'
       + '        <div class="field"><label>Status</label><select id="obra-status"><option value="Planejado" ' + (self.matchValue(current.statusObra, 'Planejado') ? 'selected' : '') + '>Planejado</option><option value="Em execução" ' + (self.matchValue(current.statusObra, 'Em execução') ? 'selected' : '') + '>Em execução</option><option value="Concluída" ' + (self.matchValue(current.statusObra, 'Concluída') ? 'selected' : '') + '>Concluída</option></select></div>'
       + '        <div class="field"><label>Data de abertura</label><input id="obra-data" type="date" value="' + OBRAS.helpers.escape(current.dataAbertura || OBRAS.helpers.todayISO()) + '" /></div>'
+      + '        <div class="field field-span-2"><label>Observações do repasse</label><input id="obra-repasse-obs" value="' + OBRAS.helpers.escape(current.repasseObservacoes || (currentRepasse ? currentRepasse.observacoes || '' : '')) + '" placeholder="Ex.: valor fechado com parceiro, condições, descontos" /></div>'
       + '      </div>'
       + '      <div class="form-actions"><button class="btn btn-primary" id="obra-save-btn">' + (current.id ? 'Salvar obra' : 'Cadastrar obra') + '</button><button class="btn" id="obra-clear-btn">Limpar</button></div>'
       + '    </form>'
