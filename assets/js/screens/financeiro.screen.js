@@ -156,6 +156,7 @@ OBRAS.financeiroScreen = {
           + '<td>' + OBRAS.helpers.escape(o.nome) + '</td>'
           + '<td>' + OBRAS.helpers.money(o.totalRecebido) + '</td>'
           + '<td>' + OBRAS.helpers.money(o.despesasPendentes) + '</td>'
+          + '<td>' + OBRAS.helpers.money(o.totalPagoParceiro) + '</td>'
           + '<td>' + OBRAS.helpers.money(o.saldoParceiro) + '</td>'
           + '<td>' + OBRAS.helpers.money(o.resultadoLiquido) + '</td>'
           + '<td><div class="table-actions actions-inline"><button class="small-btn" data-action="open-obra" data-id="' + o.id + '">Abrir</button><button class="small-btn btn-soft" data-action="edit-obra" data-id="' + o.id + '">Editar</button><button class="small-btn btn-danger" data-action="delete-obra" data-id="' + o.id + '">Excluir</button></div></td>'
@@ -212,7 +213,7 @@ OBRAS.financeiroScreen = {
         + '<div class="top-alert">Agora você pode pagar, editar valor e excluir lançamentos direto nesta tela. NF automática pode ser paga e editada, mas não apagada por engano.</div>'
         + (movRows ? '<div class="table-scroll flow-table-window"><table class="simple-table"><thead><tr><th>Data</th><th>OS</th><th>Tipo</th><th>Descrição</th><th>Status</th><th>Valor</th><th>Ações</th></tr></thead><tbody>' + movRows + '</tbody></table></div>' : '<div class="empty-state">Nenhum movimento encontrado.</div>')
         + '</div>'
-        + '<div class="table-card section-space"><h3 class="card-title">Fechamento por obra</h3>' + (obraRows ? '<div class="table-scroll obra-table-window"><table class="simple-table"><thead><tr><th>OS</th><th>Obra</th><th>Recebido</th><th>NF pendente</th><th>Parceiro pendente</th><th>Resultado líquido</th><th>Ações</th></tr></thead><tbody>' + obraRows + '</tbody></table></div>' : '<div class="empty-state">Nenhuma obra cadastrada.</div>') + '</div>'
+        + '<div class="table-card section-space"><h3 class="card-title">Fechamento por obra</h3>' + (obraRows ? '<div class="table-scroll obra-table-window"><table class="simple-table"><thead><tr><th>OS</th><th>Obra</th><th>Recebido</th><th>NF pendente</th><th>Parceiro pago</th><th>Parceiro pendente</th><th>Resultado líquido</th><th>Ações</th></tr></thead><tbody>' + obraRows + '</tbody></table></div>' : '<div class="empty-state">Nenhuma obra cadastrada.</div>') + '</div>'
       );
 
       var filtroObra = document.getElementById('fin-filtro-obra');
